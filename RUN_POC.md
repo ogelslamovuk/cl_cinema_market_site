@@ -70,6 +70,8 @@ python scripts/close_market_day.py `
 - пересобирает `docs/data/market.json`;
 - запускает `verify.py`;
 - с флагом `--publish` коммитит и пушит только обновлённый JSON dashboard.
+- если есть checkout `runtime/site_repo`, с `--publish` также обновляет public site repo
+  `ogelslamovuk/cl_cinema_market_site` для `market.cinemalab.io`.
 
 Для dry-run без публикации уберите `--publish`. Для проверки на уже скопированной SQLite БД используйте
 `--no-pull-vps-db --db path\to\market.sqlite3`.
