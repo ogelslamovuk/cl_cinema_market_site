@@ -17,6 +17,30 @@ const esc = (value) => String(value ?? "")
 const unique = (rows, key) => [...new Set(rows.map((row) => row[key]).filter(Boolean))]
   .sort((a, b) => String(a).localeCompare(String(b), "ru"));
 const REPORTING_START_DATE = "2026-08-04";
+const UNAVAILABLE_DATES = new Map([
+  ["2026-08-11", {
+    title: "Нет данных за 11 августа",
+    message: "Сбор был прерван из-за технического сбоя у источника.",
+  }],
+]);
+
+function selectedUnavailableDate() {
+  const period = $("period").value;
+  if (!period.startsWith("d:")) return null;
+  const date = period.slice(2);
+  const notice = UNAVAILABLE_DATES.get(date);
+  return notice ? { date, ...notice } : null;
+}
+
+function renderAvailabilityState() {
+  const unavailable = selectedUnavailableDate();
+  document.body.classList?.toggle("data-unavailable", Boolean(unavailable));
+  $("unavailable-day").hidden = !unavailable;
+  if (!unavailable) return false;
+  $("unavailable-day-title").textContent = unavailable.title;
+  $("unavailable-day-message").textContent = unavailable.message;
+  return true;
+}
 
 const REGION_ALIASES = new Map([
   ["Минская обл.", "Минская область"],
@@ -425,6 +449,7 @@ function renderShare(bycardRows, elapsed, usable, finalUsable, silverRows) {
 }
 
 function render() {
+  if (renderAvailabilityState()) return;
   const rows = selectedRows();
   const generatedAt = new Date(source.meta.generated_at).getTime();
   const silverRows = selectedSilverRows().filter(
@@ -570,14 +595,17 @@ async function init() {
   const allSilverRows = source.silver_screen?.sessions || [];
   const silverDates = unique(allSilverRows, "date").sort();
   const generatedDay = source.meta.generated_at.slice(0, 10);
-  const reportingDates = silverDates
+  const collectedDates = silverDates
     .filter((value) => value >= REPORTING_START_DATE && value <= generatedDay)
+  const reportingDates = [...new Set([...collectedDates, ...UNAVAILABLE_DATES.keys()])]
+    .sort()
     .reverse();
   reportingDateSet = new Set(reportingDates);
   $("period").innerHTML = '<option value="">Весь период</option>' + reportingDates
     .map((value) => `<option value="d:${esc(value)}">${new Date(`${value}T00:00:00`).toLocaleDateString("ru-RU")}</option>`)
     .join("");
-  if (reportingDates.length) $("period").value = `d:${reportingDates[0]}`;
+  const defaultDate = [...collectedDates].sort().reverse()[0] || reportingDates[0];
+  if (defaultDate) $("period").value = `d:${defaultDate}`;
   refreshFilterOptions();
   document.querySelectorAll("select").forEach((select) => select.addEventListener("change", () => {
     refreshFilterOptions();
