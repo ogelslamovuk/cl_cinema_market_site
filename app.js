@@ -384,7 +384,7 @@ function renderShare(bycardRows, elapsed, usable, finalUsable, silverRows) {
   if (silverReady && silverRows.length && elapsed.length) {
     const coverage = usable.length / elapsed.length * 100;
     const strictCoverage = finalUsable.length / elapsed.length * 100;
-    if (coverage < 96) {
+    if (coverage < 93) {
       const silverTickets = silverRows.reduce((sum, row) => sum + row.tickets, 0);
       const bycardTickets = finalUsable.reduce((sum, row) => sum + (ticketValue(row) ?? 0), 0);
       const observedMarket = silverTickets + bycardTickets;
