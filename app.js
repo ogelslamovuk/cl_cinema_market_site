@@ -28,6 +28,10 @@ const UNAVAILABLE_DATES = new Map([
   }],
 ]);
 
+function isUnavailableDate(date) {
+  return UNAVAILABLE_DATES.has(date);
+}
+
 function selectedUnavailableDate() {
   const period = $("period").value;
   if (!period.startsWith("d:")) return null;
@@ -83,7 +87,7 @@ function selectedSilverRows() {
 }
 
 function filterRows(inputRows) {
-  let rows = inputRows.filter((row) => reportingDateSet.has(row.date));
+  let rows = inputRows.filter((row) => reportingDateSet.has(row.date) && !isUnavailableDate(row.date));
   const period = $("period").value;
   if (period.startsWith("d:")) rows = rows.filter((row) => row.date === period.slice(2));
   if (period.startsWith("w:")) rows = rows.filter((row) => row.release_week === period.slice(2));
@@ -96,7 +100,7 @@ function filterRows(inputRows) {
 
 function rowsForSelectedPeriod() {
   let rows = [...(source.sessions || []), ...(source.silver_screen?.sessions || [])]
-    .filter((row) => reportingDateSet.has(row.date));
+    .filter((row) => reportingDateSet.has(row.date) && !isUnavailableDate(row.date));
   const period = $("period").value;
   if (period.startsWith("d:")) rows = rows.filter((row) => row.date === period.slice(2));
   if (period.startsWith("w:")) rows = rows.filter((row) => row.release_week === period.slice(2));
@@ -600,13 +604,17 @@ async function init() {
   const silverDates = unique(allSilverRows, "date").sort();
   const generatedDay = source.meta.generated_at.slice(0, 10);
   const collectedDates = silverDates
-    .filter((value) => value >= REPORTING_START_DATE && value <= generatedDay)
+    .filter((value) => value >= REPORTING_START_DATE && value <= generatedDay && !isUnavailableDate(value))
   const reportingDates = [...new Set([...collectedDates, ...UNAVAILABLE_DATES.keys()])]
     .sort()
     .reverse();
   reportingDateSet = new Set(reportingDates);
   $("period").innerHTML = '<option value="">Весь период</option>' + reportingDates
-    .map((value) => `<option value="d:${esc(value)}">${new Date(`${value}T00:00:00`).toLocaleDateString("ru-RU")}</option>`)
+    .map((value) => {
+      const label = new Date(`${value}T00:00:00`).toLocaleDateString("ru-RU")
+        + (isUnavailableDate(value) ? " · нет данных" : "");
+      return `<option value="d:${esc(value)}">${esc(label)}</option>`;
+    })
     .join("");
   const defaultDate = [...collectedDates].sort().reverse()[0] || reportingDates[0];
   if (defaultDate) $("period").value = `d:${defaultDate}`;
