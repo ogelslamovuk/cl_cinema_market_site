@@ -3,6 +3,9 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta http-equiv="Cache-Control" content="no-store">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
     <meta name="theme-color" content="#0d1019">
     <title>Кинорынок Беларуси — Cinemalab</title>
@@ -17,7 +20,7 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="../styles.css?v=period-nav-20260904-3">
   </head>
   <body class="dashboard-page" data-data-url="../data/market.json">
     <header class="app-chrome">
@@ -39,7 +42,28 @@
       </nav>
 
       <section class="filters" aria-label="Фильтры отчёта">
-        <label>Период<select id="period"></select></label>
+        <div class="period-filter">
+          <span class="filter-caption">Период</span>
+          <button class="period-trigger" id="period-trigger" type="button" aria-haspopup="dialog" aria-expanded="false" onclick="event.stopPropagation(); togglePeriodPopover();">
+            <span id="period-current">Загрузка…</span>
+            <span class="period-trigger__chevron" aria-hidden="true"></span>
+          </button>
+          <select id="period" aria-hidden="true" tabindex="-1"></select>
+          <div class="period-popover" id="period-popover" hidden>
+            <div class="period-shortcuts" aria-label="Быстрый выбор периода">
+              <button type="button" data-period-preset="yesterday" onclick="selectPeriod('d:' + minskDay(-1))">Вчера</button>
+              <button type="button" data-period-preset="r:last7" onclick="selectPeriod('r:last7')">7 дней</button>
+              <button type="button" data-period-preset="current-week" onclick="selectPeriod('w:' + releaseWeekStartForDay(minskDay(0)))">Эта прокатная неделя</button>
+              <button class="period-all" id="period-all" type="button" onclick="selectPeriod('')">Весь период</button>
+            </div>
+            <div class="period-tabs" role="tablist" aria-label="Тип периода">
+              <button id="period-tab-days" type="button" class="is-active" data-period-mode="days" onclick="setPeriodMode('days')">Дни</button>
+              <button id="period-tab-weeks" type="button" data-period-mode="weeks" onclick="setPeriodMode('weeks')">Прокатные недели</button>
+            </div>
+            <div class="period-pane is-active" id="period-days"></div>
+            <div class="period-pane" id="period-weeks"></div>
+          </div>
+        </div>
         <label>Область<select id="region"><option value="">Все области</option></select></label>
         <label>Город<select id="city"><option value="">Все города</option></select></label>
         <label>Кинотеатр<select id="cinema"><option value="">Все кинотеатры</option></select></label>
@@ -170,6 +194,6 @@
 
       <footer><strong>Доля рынка, динамика и качество данных — в одном срезе.</strong><span>Cinemalab Market Intelligence · ByCard / 24Афиша · mooon</span></footer>
     </main>
-    <script src="../app.js"></script>
+    <script src="../app.js?v=period-nav-20260904-3"></script>
   </body>
 </html>

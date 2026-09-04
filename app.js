@@ -7,6 +7,10 @@ const money = new Intl.NumberFormat("ru-RU", {
 
 let source = null;
 let reportingDateSet = new Set();
+let periodDateOptions = [];
+let periodWeekOptions = [];
+let periodMode = "days";
+let dynamicUnavailableDates = new Map();
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? "")
   .replaceAll("&", "&amp;")
@@ -28,15 +32,19 @@ const UNAVAILABLE_DATES = new Map([
   }],
 ]);
 
+function unavailableNotice(date) {
+  return UNAVAILABLE_DATES.get(date) || dynamicUnavailableDates.get(date);
+}
+
 function isUnavailableDate(date) {
-  return UNAVAILABLE_DATES.has(date);
+  return Boolean(unavailableNotice(date));
 }
 
 function selectedUnavailableDate() {
   const period = $("period").value;
   if (!period.startsWith("d:")) return null;
   const date = period.slice(2);
-  const notice = UNAVAILABLE_DATES.get(date);
+  const notice = unavailableNotice(date);
   return notice ? { date, ...notice } : null;
 }
 
@@ -48,6 +56,157 @@ function renderAvailabilityState() {
   $("unavailable-day-title").textContent = unavailable.title;
   $("unavailable-day-message").textContent = unavailable.message;
   return true;
+}
+
+function dateParts(date) {
+  return String(date).split("-").map((value) => Number(value));
+}
+
+function dateFromIsoDay(date) {
+  const [year, month, day] = dateParts(date);
+  return new Date(year, month - 1, day);
+}
+
+function isoDayFromUtcDate(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function addDays(date, days) {
+  const [year, month, day] = dateParts(date);
+  const utc = new Date(Date.UTC(year, month - 1, day + days));
+  return isoDayFromUtcDate(utc);
+}
+
+function minskDay(offsetDays = 0) {
+  const parts = new Intl.DateTimeFormat("en", {
+    timeZone: "Europe/Minsk",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const utc = new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day) + offsetDays));
+  return isoDayFromUtcDate(utc);
+}
+
+function formatDay(date) {
+  return dateFromIsoDay(date).toLocaleDateString("ru-RU");
+}
+
+function formatMonth(date) {
+  return dateFromIsoDay(date).toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+}
+
+function formatWeekday(date) {
+  return dateFromIsoDay(date).toLocaleDateString("ru-RU", { weekday: "short" }).replace(".", "");
+}
+
+function releaseWeekLabel(start) {
+  if (!start) return "";
+  return `${formatDay(start)} — ${formatDay(addDays(start, 6))}`;
+}
+
+function releaseWeekStartForDay(date) {
+  const day = dateFromIsoDay(date).getDay();
+  const diffFromThursday = (day + 3) % 7;
+  return addDays(date, -diffFromThursday);
+}
+
+function selectPeriod(value) {
+  $("period").value = value;
+  $("period").dispatchEvent(new Event("change", { bubbles: true }));
+  closePeriodPopover();
+}
+
+function closePeriodPopover() {
+  const popover = $("period-popover");
+  if (!popover) return;
+  popover.hidden = true;
+  $("period-trigger")?.setAttribute("aria-expanded", "false");
+}
+
+function togglePeriodPopover() {
+  const popover = $("period-popover");
+  if (!popover) return;
+  popover.hidden = !popover.hidden;
+  $("period-trigger")?.setAttribute("aria-expanded", String(!popover.hidden));
+}
+
+function periodLabel(value) {
+  if (!value) return "Весь период";
+  if (value === "r:last7") return "Последние 7 дней";
+  if (value.startsWith("d:")) {
+    const date = value.slice(2);
+    return `${formatDay(date)}${isUnavailableDate(date) ? " · нет данных" : ""}`;
+  }
+  if (value.startsWith("w:")) return `Прокатная неделя ${releaseWeekLabel(value.slice(2))}`;
+  return value;
+}
+
+function setPeriodMode(mode) {
+  periodMode = mode;
+  document.querySelectorAll("[data-period-mode]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.periodMode === mode);
+  });
+  $("period-days")?.classList.toggle("is-active", mode === "days");
+  $("period-weeks")?.classList.toggle("is-active", mode === "weeks");
+}
+
+function renderPeriodControl() {
+  const currentValue = $("period").value;
+  $("period-current").textContent = periodLabel(currentValue);
+  $("period-all").classList.toggle("is-selected", currentValue === "");
+  const yesterdayValue = `d:${minskDay(-1)}`;
+  const currentWeekValue = `w:${releaseWeekStartForDay(minskDay(0))}`;
+  document.querySelectorAll("[data-period-preset]").forEach((button) => {
+    const preset = button.dataset.periodPreset;
+    button.classList.toggle("is-selected",
+      preset === currentValue
+      || (preset === "yesterday" && currentValue === yesterdayValue)
+      || (preset === "current-week" && currentValue === currentWeekValue));
+  });
+
+  const months = new Map();
+  for (const date of periodDateOptions) {
+    const month = date.slice(0, 7);
+    if (!months.has(month)) months.set(month, []);
+    months.get(month).push(date);
+  }
+
+  $("period-days").innerHTML = [...months.entries()].map(([, dates]) => `
+    <section class="period-month">
+      <h3>${esc(formatMonth(dates[0]))}</h3>
+      <div class="period-day-list">
+        ${dates.map((date) => {
+          const unavailable = isUnavailableDate(date);
+          return `
+            <button
+              type="button"
+              class="period-day${currentValue === `d:${date}` ? " is-selected" : ""}${unavailable ? " is-unavailable" : ""}"
+              data-period-value="d:${esc(date)}"
+              onclick="selectPeriod('d:${esc(date)}')"
+            >
+              <span>${esc(formatDay(date))}</span>
+              <small>${esc(formatWeekday(date))}</small>
+              ${unavailable ? '<b>нет данных</b>' : ""}
+            </button>`;
+        }).join("")}
+      </div>
+    </section>
+  `).join("");
+
+  $("period-weeks").innerHTML = periodWeekOptions.map((week) => `
+    <button
+      type="button"
+      class="period-week${currentValue === `w:${week.value}` ? " is-selected" : ""}"
+      data-period-value="w:${esc(week.value)}"
+      onclick="selectPeriod('w:${esc(week.value)}')"
+    >
+      <span>Прокатная неделя</span>
+      <strong>${esc(releaseWeekLabel(week.value))}</strong>
+      <small>${nf.format(week.days)} ${week.days === 1 ? "день" : "дней"} в отчёте</small>
+    </button>
+  `).join("") || '<p class="period-empty">Прокатные недели появятся после закрытия данных.</p>';
 }
 
 const REGION_ALIASES = new Map([
@@ -91,6 +250,11 @@ function filterRows(inputRows) {
   const period = $("period").value;
   if (period.startsWith("d:")) rows = rows.filter((row) => row.date === period.slice(2));
   if (period.startsWith("w:")) rows = rows.filter((row) => row.release_week === period.slice(2));
+  if (period === "r:last7") {
+    const end = minskDay(-1);
+    const start = addDays(end, -6);
+    rows = rows.filter((row) => row.date >= start && row.date <= end);
+  }
   for (const key of ["region", "city", "cinema", "film"]) {
     const value = $(key).value;
     if (value) rows = rows.filter((row) => String(row[key]) === value);
@@ -104,6 +268,11 @@ function rowsForSelectedPeriod() {
   const period = $("period").value;
   if (period.startsWith("d:")) rows = rows.filter((row) => row.date === period.slice(2));
   if (period.startsWith("w:")) rows = rows.filter((row) => row.release_week === period.slice(2));
+  if (period === "r:last7") {
+    const end = minskDay(-1);
+    const start = addDays(end, -6);
+    rows = rows.filter((row) => row.date >= start && row.date <= end);
+  }
   return rows;
 }
 
@@ -131,6 +300,8 @@ function ticketValue(row) {
 
 function competitorName(cinema) {
   const name = String(cinema || "").toLocaleLowerCase("ru");
+  if (name.includes("замок")) return "Замок";
+  if (name.includes("корона-сити") || name.includes("корона сити")) return "Корона-Сити";
   if (name.includes("skyline")) return "Skyline";
   if (name.includes("falcon club")) return "Falcon Club";
   if (name.includes("prizma")) return "Prizma";
@@ -138,7 +309,7 @@ function competitorName(cinema) {
 }
 
 function renderCompetitors(bycardRows, mooonRows) {
-  const order = ["mooon", "Skyline", "Falcon Club", "Prizma", "КВП"];
+  const order = ["mooon", "Skyline", "Falcon Club", "Prizma", "КВП", "Замок", "Корона-Сити"];
   const groups = Object.fromEntries(order.map((name) => [name, {
     name, sessions: 0, measured: 0, tickets: 0,
     revenueMin: 0, revenueMax: 0,
@@ -602,25 +773,64 @@ async function init() {
   $("updated").textContent = `Обновлено ${new Date(source.meta.generated_at).toLocaleString("ru-RU")}`;
   const allSilverRows = source.silver_screen?.sessions || [];
   const silverDates = unique(allSilverRows, "date").sort();
+  const marketDates = unique(source.sessions || [], "date").sort();
   const generatedDay = source.meta.generated_at.slice(0, 10);
-  const collectedDates = silverDates
-    .filter((value) => value >= REPORTING_START_DATE && value <= generatedDay && !isUnavailableDate(value))
-  const reportingDates = [...new Set([...collectedDates, ...UNAVAILABLE_DATES.keys()])]
+  const yesterday = minskDay(-1);
+  const collectedDates = [...new Set([...silverDates, ...marketDates])]
+    .filter((value) => value >= REPORTING_START_DATE && value <= generatedDay && !isUnavailableDate(value));
+  dynamicUnavailableDates = new Map();
+  if (yesterday >= REPORTING_START_DATE && !collectedDates.includes(yesterday) && !UNAVAILABLE_DATES.has(yesterday)) {
+    dynamicUnavailableDates.set(yesterday, {
+      title: `Нет данных за ${formatDay(yesterday)}`,
+      message: "День ещё не опубликован в dashboard.",
+    });
+  }
+  const reportingDates = [...new Set([...collectedDates, ...UNAVAILABLE_DATES.keys(), ...dynamicUnavailableDates.keys()])]
     .sort()
     .reverse();
   reportingDateSet = new Set(reportingDates);
-  $("period").innerHTML = '<option value="">Весь период</option>' + reportingDates
+  periodDateOptions = reportingDates;
+  const yesterdayPeriod = `d:${yesterday}`;
+  const currentReleaseWeekPeriod = `w:${releaseWeekStartForDay(minskDay(0))}`;
+  const validRows = [...(source.sessions || []), ...(source.silver_screen?.sessions || [])]
+    .filter((row) => collectedDates.includes(row.date));
+  periodWeekOptions = [...validRows.reduce((weeks, row) => {
+    const week = row.release_week || releaseWeekStartForDay(row.date);
+    if (!week) return weeks;
+    if (!weeks.has(week)) weeks.set(week, new Set());
+    weeks.get(week).add(row.date);
+    return weeks;
+  }, new Map()).entries()]
+    .map(([value, days]) => ({ value, days: days.size }))
+    .sort((a, b) => b.value.localeCompare(a.value));
+  $("period").innerHTML = '<option value="">Весь период</option>'
+    + `<option value="r:last7">Последние 7 дней</option>`
+    + `<option value="${esc(currentReleaseWeekPeriod)}">Текущая прокатная неделя</option>`
+    + reportingDates
     .map((value) => {
       const label = new Date(`${value}T00:00:00`).toLocaleDateString("ru-RU")
         + (isUnavailableDate(value) ? " · нет данных" : "");
       return `<option value="d:${esc(value)}">${esc(label)}</option>`;
     })
+    .join("")
+    + periodWeekOptions
+    .map((week) => `<option value="w:${esc(week.value)}">Прокатная неделя ${esc(releaseWeekLabel(week.value))}</option>`)
     .join("");
-  const defaultDate = [...collectedDates].sort().reverse()[0] || reportingDates[0];
+  const defaultDate = reportingDates.includes(yesterday)
+    ? yesterday
+    : [...collectedDates].filter((date) => date <= yesterday).sort().reverse()[0] || reportingDates[0];
   if (defaultDate) $("period").value = `d:${defaultDate}`;
   refreshFilterOptions();
+  renderPeriodControl();
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".period-filter")) closePeriodPopover();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closePeriodPopover();
+  });
   document.querySelectorAll("select").forEach((select) => select.addEventListener("change", () => {
     refreshFilterOptions();
+    renderPeriodControl();
     render();
   }));
   render();
