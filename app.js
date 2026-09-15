@@ -21,19 +21,55 @@ const esc = (value) => String(value ?? "")
 const unique = (rows, key) => [...new Set(rows.map((row) => row[key]).filter(Boolean))]
   .sort((a, b) => String(a).localeCompare(String(b), "ru"));
 const REPORTING_START_DATE = "2026-08-04";
-const UNAVAILABLE_DATES = new Map([
-  ["2026-08-11", {
-    title: "Нет данных за 11 августа",
-    message: "Сбор был прерван из-за технического сбоя у источника.",
-  }],
-  ["2026-08-20", {
-    title: "Нет данных за 20 августа",
-    message: "Финальное покрытие рынка ниже порога 87%, поэтому день не опубликован как валидный.",
-  }],
+const DASHBOARD_PROTOCOL = {
+  no_data: {
+    index: "ДАННЫЕ НЕДОСТУПНЫ",
+    title: (day) => `Нет данных за ${formatDay(day)}`,
+    message: "Финальные данные рынка не получены, поэтому день не опубликован как валидный.",
+    shortLabel: "нет данных",
+  },
+  below_target_coverage: {
+    index: "ДАННЫЕ НИЖЕ ПОРОГА",
+    title: (day) => `Данные ниже порога за ${formatDay(day)}`,
+    message: (incident) => {
+      const coverage = formatCoverage(incident.coverage_pct);
+      const threshold = formatCoverage(incident.threshold_pct ?? 87);
+      return `Финальное покрытие рынка ${coverage}% ниже порога ${threshold}%, поэтому день не опубликован как валидный.`;
+    },
+    shortLabel: "ниже порога",
+  },
+};
+const KNOWN_PROTOCOL_DATES = new Map([
+  ["2026-08-11", { protocol: "no_data" }],
+  ["2026-08-20", { protocol: "below_target_coverage", threshold_pct: 87 }],
 ]);
 
+function formatCoverage(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric)
+    ? numeric.toLocaleString("ru-RU", { maximumFractionDigits: 2 })
+    : "—";
+}
+
+function normalizeProtocolIncident(incident) {
+  const usable = Number(incident?.usable_sessions ?? incident?.usable ?? 0);
+  const protocol = incident?.protocol === "no_data" || incident?.protocol === "below_target_coverage"
+    ? incident.protocol
+    : usable === 0 ? "no_data" : "below_target_coverage";
+  return { ...incident, protocol };
+}
+
 function unavailableNotice(date) {
-  return UNAVAILABLE_DATES.get(date) || dynamicUnavailableDates.get(date);
+  const incident = KNOWN_PROTOCOL_DATES.get(date) || dynamicUnavailableDates.get(date);
+  if (!incident) return null;
+  const normalized = normalizeProtocolIncident(incident);
+  const renderer = DASHBOARD_PROTOCOL[normalized.protocol];
+  return {
+    index: renderer.index,
+    title: renderer.title(date),
+    message: typeof renderer.message === "function" ? renderer.message(normalized) : renderer.message,
+    shortLabel: renderer.shortLabel,
+  };
 }
 
 function isUnavailableDate(date) {
@@ -53,6 +89,7 @@ function renderAvailabilityState() {
   document.body.classList?.toggle("data-unavailable", Boolean(unavailable));
   $("unavailable-day").hidden = !unavailable;
   if (!unavailable) return false;
+  $("unavailable-day-index").textContent = unavailable.index;
   $("unavailable-day-title").textContent = unavailable.title;
   $("unavailable-day-message").textContent = unavailable.message;
   return true;
@@ -776,16 +813,17 @@ async function init() {
   const marketDates = unique(source.sessions || [], "date").sort();
   const generatedDay = source.meta.generated_at.slice(0, 10);
   const yesterday = minskDay(-1);
+  dynamicUnavailableDates = new Map(
+    (source.data_quality_incidents || [])
+      .filter((incident) => incident?.date)
+      .map((incident) => [incident.date, normalizeProtocolIncident(incident)]),
+  );
   const collectedDates = [...new Set([...silverDates, ...marketDates])]
     .filter((value) => value >= REPORTING_START_DATE && value <= generatedDay && !isUnavailableDate(value));
-  dynamicUnavailableDates = new Map();
-  if (yesterday >= REPORTING_START_DATE && !collectedDates.includes(yesterday) && !UNAVAILABLE_DATES.has(yesterday)) {
-    dynamicUnavailableDates.set(yesterday, {
-      title: `Нет данных за ${formatDay(yesterday)}`,
-      message: "День ещё не опубликован в dashboard.",
-    });
+  if (yesterday >= REPORTING_START_DATE && !collectedDates.includes(yesterday) && !unavailableNotice(yesterday)) {
+    dynamicUnavailableDates.set(yesterday, { protocol: "no_data" });
   }
-  const reportingDates = [...new Set([...collectedDates, ...UNAVAILABLE_DATES.keys(), ...dynamicUnavailableDates.keys()])]
+  const reportingDates = [...new Set([...collectedDates, ...KNOWN_PROTOCOL_DATES.keys(), ...dynamicUnavailableDates.keys()])]
     .sort()
     .reverse();
   reportingDateSet = new Set(reportingDates);
