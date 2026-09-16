@@ -613,7 +613,7 @@ function renderShare(bycardRows, elapsed, usable, finalUsable, silverRows) {
       const observedRevenue = silverRevenue + bycardRevenue;
       const revenueShare = observedRevenue ? silverRevenue / observedRevenue * 100 : null;
       $("share").textContent = ticketShare === null ? "—" : `${ticketShare.toFixed(1)}%`;
-      $("share-note").textContent = `Пилотная оценка · пригодно ${usable.length} из ${elapsed.length} (${coverage.toFixed(1)}%) · strict-final ${strictCoverage.toFixed(1)}%`;
+      $("share-note").textContent = `Оценка по доступным данным · пригодно ${usable.length} из ${elapsed.length} (${coverage.toFixed(1)}%) · strict-final ${strictCoverage.toFixed(1)}%`;
       $("share-track").style.width = ticketShare === null ? "0" : `${ticketShare}%`;
       $("revenue-share").textContent = revenueShare === null ? "—" : `${revenueShare.toFixed(1)}%`;
       $("revenue-share-note").textContent = `Не итоговая доля · учтено ${nf.format(bycardTickets)} Admissions конкурентов`;
