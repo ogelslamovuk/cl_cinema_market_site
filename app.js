@@ -787,16 +787,63 @@ function render() {
     source_anomaly: "Аномалия источника",
     silver_screen_approved: "mooon · согласованная выгрузка",
   };
+  Object.assign(labels, {
+    exact_api_sales: "Точные продажи из API",
+    availability_estimate: "Оценка по карте мест",
+    closed_before_capture: "Закрыто до снимка",
+    general_admission_unverified: "Без нумерованных мест",
+    not_captured: "Снимок ещё не получен",
+    capture_failed: "Ошибка запроса",
+    source_anomaly: "Противоречивые данные источника",
+    silver_screen_approved: "mooon · согласованная выгрузка",
+  });
+  const qualityHelp = {
+    exact_api_sales: "Источник передал количество проданных билетов напрямую. Это точное значение, а не расчёт по карте мест.",
+    availability_estimate: "Оценка занятости по карте мест: считаются места, которые уже недоступны. Это не точное число продаж — среди них могут быть брони или технически закрытые места.",
+    closed_before_capture: "Сеанс закрылся до того, как мы получили пригодный снимок карты мест. Продажи по нему не подставляются.",
+    general_admission_unverified: "У сеанса нет нумерованных мест, поэтому его нельзя проверить по карте мест так же, как обычный сеанс.",
+    not_captured: "Сеанс найден в расписании, но пригодный итоговый снимок ещё не получен.",
+    capture_failed: "При запросе данных произошла техническая ошибка. Это не означает, что продаж не было.",
+    source_anomaly: "Источник вернул противоречивые показатели. Результат оставлен отдельно и требует проверки.",
+    silver_screen_approved: "Согласованная выгрузка mooon: данные переданы готовым итогом.",
+  };
   $("quality").innerHTML = Object.entries(quality)
     .sort((a, b) => b[1] - a[1])
     .map(([key, count]) => `
       <div class="quality-row">
-        <i class="quality-dot"></i><span>${esc(labels[key] || key)}</span><strong>${nf.format(count)}</strong>
+        <i class="quality-dot" aria-hidden="true"></i>
+        <span class="quality-label">
+          <span>${esc(labels[key] || key)}</span>
+          <button class="quality-tooltip-trigger" type="button" aria-label="Details: ${esc(labels[key] || key)}" aria-describedby="quality-tooltip-${esc(key)}" aria-expanded="false">
+            <span aria-hidden="true">i</span>
+            <span class="quality-tooltip" id="quality-tooltip-${esc(key)}" role="tooltip">${esc(qualityHelp[key] || "Дополнительное пояснение для этой категории пока не добавлено.")}</span>
+          </button>
+        </span>
+        <strong>${nf.format(count)}</strong>
       </div>`).join("") || '<div class="muted">Завершённых сеансов пока нет</div>';
 
   renderShare(rows, elapsed, usable, finalUsable, silverRows);
   syncOrbit("share-orbit", "share-track");
   syncOrbit("revenue-orbit", "revenue-share-track");
+}
+
+function bindQualityTooltips() {
+  document.addEventListener("click", (event) => {
+    const trigger = event.target.closest(".quality-tooltip-trigger");
+    const openTriggers = document.querySelectorAll('.quality-tooltip-trigger[aria-expanded="true"]');
+    if (!trigger) {
+      openTriggers.forEach((item) => item.setAttribute("aria-expanded", "false"));
+      return;
+    }
+    const wasOpen = trigger.getAttribute("aria-expanded") === "true";
+    openTriggers.forEach((item) => item.setAttribute("aria-expanded", "false"));
+    trigger.setAttribute("aria-expanded", String(!wasOpen));
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    document.querySelectorAll('.quality-tooltip-trigger[aria-expanded="true"]')
+      .forEach((item) => item.setAttribute("aria-expanded", "false"));
+  });
 }
 
 async function init() {
@@ -872,6 +919,7 @@ async function init() {
     renderPeriodControl();
     render();
   }));
+  bindQualityTooltips();
   render();
 }
 
