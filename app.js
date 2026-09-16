@@ -573,6 +573,7 @@ function renderSourceOverview(rows, silverRows, finalUsable) {
 function renderShare(bycardRows, elapsed, usable, finalUsable, silverRows) {
   const silver = source.silver_screen || {};
   const silverReady = String(silver.status || "").startsWith("ready");
+  const backendReady = (source.market_share || {}).status === "ready";
   document.querySelectorAll(".market-card").forEach((card) => card.classList.remove("provisional"));
   const unavailable = (note) => {
     $("share").textContent = "—";
@@ -600,7 +601,7 @@ function renderShare(bycardRows, elapsed, usable, finalUsable, silverRows) {
   if (silverReady && silverRows.length && elapsed.length) {
     const coverage = usable.length / elapsed.length * 100;
     const strictCoverage = finalUsable.length / elapsed.length * 100;
-    if (coverage < 93) {
+    if (coverage < 90 && !backendReady) {
       const silverTickets = silverRows.reduce((sum, row) => sum + row.tickets, 0);
       const bycardTickets = finalUsable.reduce((sum, row) => sum + (ticketValue(row) ?? 0), 0);
       const observedMarket = silverTickets + bycardTickets;
