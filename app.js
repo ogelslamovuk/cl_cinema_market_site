@@ -20,7 +20,7 @@ const esc = (value) => String(value ?? "")
   .replaceAll("'", "&#039;");
 const unique = (rows, key) => [...new Set(rows.map((row) => row[key]).filter(Boolean))]
   .sort((a, b) => String(a).localeCompare(String(b), "ru"));
-const REPORTING_START_DATE = "2026-08-04";
+const REPORTING_START_DATE = "2026-08-01";
 const DASHBOARD_PROTOCOL = {
   no_data: {
     index: "ДАННЫЕ НЕДОСТУПНЫ",
