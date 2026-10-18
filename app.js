@@ -134,17 +134,20 @@ async function fetchVerifiedDay(date) {
 
 function datesForPeriod(value) {
   const dates = partitionIndex?.reporting_dates || [];
-  if (value.startsWith("d:")) return [value.slice(2)];
+  if (value.startsWith("d:")) {
+    const date = value.slice(2);
+    return isUnavailableDate(date) ? [] : [date];
+  }
   if (value.startsWith("w:")) {
     const week = value.slice(2);
-    return dates.filter((date) => releaseWeekStartForDay(date) === week);
+    return dates.filter((date) => !isUnavailableDate(date) && releaseWeekStartForDay(date) === week);
   }
   if (value === "r:last7") {
     const end = minskDay(-1);
     const start = addDays(end, -6);
-    return dates.filter((date) => date >= start && date <= end);
+    return dates.filter((date) => !isUnavailableDate(date) && date >= start && date <= end);
   }
-  return [...dates];
+  return dates.filter((date) => !isUnavailableDate(date));
 }
 
 async function loadPartitionDates(dates, requestId) {
@@ -231,6 +234,13 @@ function minskDay(offsetDays = 0) {
 
 function formatDay(date) {
   return dateFromIsoDay(date).toLocaleDateString("ru-RU");
+}
+
+function formatLongDay(date) {
+  return dateFromIsoDay(date).toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "long",
+  });
 }
 
 function formatMonth(date) {
@@ -1031,10 +1041,32 @@ function configureReportingDates() {
       ...unique(source.silver_screen?.sessions || [], "date"),
       ...unique(source.sessions || [], "date"),
     ])];
+  dynamicUnavailableDates = new Map();
+  for (const incident of source.data_quality_incidents || []) {
+    const date = String(incident?.date || "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    if (incident.status !== "data_quality_incident" && !incident.excluded_from_period_aggregates) continue;
+    const metrics = [
+      incident.coverage_pct,
+      incident.threshold_pct,
+      incident.usable_sessions,
+      incident.total_sessions,
+    ];
+    const hasCoverage = metrics.every((value) => value !== null && value !== "" && Number.isFinite(Number(value)));
+    const [coverage, threshold, usable, total] = metrics.map(Number);
+    dynamicUnavailableDates.set(date, {
+      title: `Нет данных за ${formatLongDay(date)}`,
+      message: hasCoverage
+        ? `Финальное покрытие рынка ${nf.format(coverage)}% — ${nf.format(usable)} из ${nf.format(total)} сеансов, ниже порога ${nf.format(threshold)}%, поэтому день не опубликован как валидный.`
+        : "День не прошёл проверку качества и не опубликован как валидный.",
+    });
+  }
   const collectedDates = sourceDates
     .filter((value) => value >= REPORTING_START_DATE && value <= generatedDay && !isUnavailableDate(value));
-  dynamicUnavailableDates = new Map();
-  if (yesterday >= REPORTING_START_DATE && !collectedDates.includes(yesterday) && !UNAVAILABLE_DATES.has(yesterday)) {
+  if (yesterday >= REPORTING_START_DATE
+      && !collectedDates.includes(yesterday)
+      && !UNAVAILABLE_DATES.has(yesterday)
+      && !dynamicUnavailableDates.has(yesterday)) {
     dynamicUnavailableDates.set(yesterday, {
       title: `Нет данных за ${formatDay(yesterday)}`,
       message: "День ещё не опубликован в dashboard.",
