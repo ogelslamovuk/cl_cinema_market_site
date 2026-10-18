@@ -11,6 +11,12 @@ let periodDateOptions = [];
 let periodWeekOptions = [];
 let periodMode = "days";
 let dynamicUnavailableDates = new Map();
+let dataMode = "legacy";
+let partitionIndex = null;
+let activePeriodValue = "";
+let periodRequestId = 0;
+const loadedDays = new Map();
+const pendingDays = new Map();
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? "")
   .replaceAll("&", "&amp;")
@@ -20,56 +26,154 @@ const esc = (value) => String(value ?? "")
   .replaceAll("'", "&#039;");
 const unique = (rows, key) => [...new Set(rows.map((row) => row[key]).filter(Boolean))]
   .sort((a, b) => String(a).localeCompare(String(b), "ru"));
-const REPORTING_START_DATE = "2026-08-01";
-const DASHBOARD_PROTOCOL = {
-  no_data: {
-    index: "ДАННЫЕ НЕДОСТУПНЫ",
-    title: (day) => `Нет данных за ${formatDay(day)}`,
-    message: "Финальные данные рынка не получены, поэтому день не опубликован как валидный.",
-    shortLabel: "нет данных",
-  },
-  below_target_coverage: {
-    index: "ДАННЫЕ НИЖЕ ПОРОГА",
-    title: (day) => `Данные ниже порога за ${formatDay(day)}`,
-    message: (incident) => {
-      const coverage = formatCoverage(incident.coverage_pct);
-      const threshold = formatCoverage(incident.threshold_pct ?? 87);
-      return `Финальное покрытие рынка ${coverage}% ниже порога ${threshold}%, поэтому день не опубликован как валидный.`;
-    },
-    shortLabel: "ниже порога",
-  },
-};
-const KNOWN_PROTOCOL_DATES = new Map([
-  ["2026-08-11", { protocol: "no_data" }],
-  ["2026-08-20", { protocol: "below_target_coverage", threshold_pct: 87 }],
+const REPORTING_START_DATE = "2026-08-04";
+const UNAVAILABLE_DATES = new Map([
+  ["2026-08-11", {
+    title: "Нет данных за 11 августа",
+    message: "Сбор был прерван из-за технического сбоя у источника.",
+  }],
+  ["2026-08-20", {
+    title: "Нет данных за 20 августа",
+    message: "Финальное покрытие рынка ниже порога 87%, поэтому день не опубликован как валидный.",
+  }],
 ]);
 
-function formatCoverage(value) {
-  const numeric = Number(value);
-  return Number.isFinite(numeric)
-    ? numeric.toLocaleString("ru-RU", { maximumFractionDigits: 2 })
-    : "—";
+function setDataLoadState(kind, message) {
+  const element = $("data-load-state");
+  if (!element) return;
+  element.hidden = !message;
+  element.classList.toggle("is-loading", kind === "loading");
+  element.classList.toggle("is-error", kind === "error");
+  element.setAttribute("role", kind === "error" ? "alert" : "status");
+  element.setAttribute("aria-busy", String(kind === "loading"));
+  element.textContent = message || "";
+  document.body.setAttribute("aria-busy", String(kind === "loading"));
 }
 
-function normalizeProtocolIncident(incident) {
-  const usable = Number(incident?.usable_sessions ?? incident?.usable ?? 0);
-  const protocol = incident?.protocol === "no_data" || incident?.protocol === "below_target_coverage"
-    ? incident.protocol
-    : usable === 0 ? "no_data" : "below_target_coverage";
-  return { ...incident, protocol };
+function clearDataLoadState() {
+  setDataLoadState("idle", "");
+}
+
+function normalizeSha256(value) {
+  return String(value || "").trim().replace(/^sha256:/i, "").toLowerCase();
+}
+
+async function sha256Hex(bytes) {
+  if (!globalThis.crypto?.subtle) {
+    throw new Error("Проверка целостности данных недоступна в этом браузере.");
+  }
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)]
+    .map((value) => value.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function resolveUrl(value, base = document.baseURI) {
+  return new URL(value, base).toString();
+}
+
+function marketIndexUrl(legacyUrl) {
+  if (document.body.dataset.indexUrl) return resolveUrl(document.body.dataset.indexUrl);
+  return resolveUrl(String(legacyUrl).replace(/market\.json(?:[?#].*)?$/, "market-index.json"));
+}
+
+function normalizeRows(rows) {
+  for (const row of rows) row.region = canonicalRegion(row.region, row.city);
+  return rows;
+}
+
+function rowsFromDayPayload(payload, date) {
+  const marketRows = payload.market_sessions ?? payload.sessions;
+  const silverRows = payload.silver_screen?.sessions ?? [];
+  if (!Array.isArray(marketRows) || !Array.isArray(silverRows)) {
+    throw new Error(`Некорректный формат данных за ${formatDay(date)}.`);
+  }
+  if ([...marketRows, ...silverRows].some((row) => row.date !== date)) {
+    throw new Error(`Файл за ${formatDay(date)} содержит данные другой даты.`);
+  }
+  return {
+    marketRows: normalizeRows(marketRows),
+    silverRows: normalizeRows(silverRows),
+  };
+}
+
+async function fetchVerifiedDay(date) {
+  if (loadedDays.has(date)) return loadedDays.get(date);
+  if (pendingDays.has(date)) return pendingDays.get(date);
+  const entry = partitionIndex?.days?.[date];
+  if (!entry?.url || !entry?.sha256) {
+    throw new Error(`В индексе нет проверяемого файла за ${formatDay(date)}.`);
+  }
+  const expectedHash = normalizeSha256(entry.sha256);
+  if (!/^[a-f0-9]{64}$/.test(expectedHash)) {
+    throw new Error(`Некорректная контрольная сумма файла за ${formatDay(date)}.`);
+  }
+  const request = (async () => {
+    const response = await fetch(resolveUrl(entry.url, partitionIndex.__url), { cache: "no-store" });
+    if (!response.ok) throw new Error(`Не удалось загрузить ${formatDay(date)}: HTTP ${response.status}.`);
+    const bytes = await response.arrayBuffer();
+    const actualHash = await sha256Hex(bytes);
+    if (actualHash !== expectedHash) {
+      throw new Error(`Контрольная сумма данных за ${formatDay(date)} не совпала.`);
+    }
+    let payload;
+    try {
+      payload = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
+    } catch (error) {
+      throw new Error(`Файл данных за ${formatDay(date)} повреждён.`);
+    }
+    const rows = rowsFromDayPayload(payload, date);
+    loadedDays.set(date, rows);
+    source.sessions.push(...rows.marketRows);
+    source.silver_screen.sessions.push(...rows.silverRows);
+    return rows;
+  })().finally(() => pendingDays.delete(date));
+  pendingDays.set(date, request);
+  return request;
+}
+
+function datesForPeriod(value) {
+  const dates = partitionIndex?.reporting_dates || [];
+  if (value.startsWith("d:")) return [value.slice(2)];
+  if (value.startsWith("w:")) {
+    const week = value.slice(2);
+    return dates.filter((date) => releaseWeekStartForDay(date) === week);
+  }
+  if (value === "r:last7") {
+    const end = minskDay(-1);
+    const start = addDays(end, -6);
+    return dates.filter((date) => date >= start && date <= end);
+  }
+  return [...dates];
+}
+
+async function loadPartitionDates(dates, requestId) {
+  const queue = [...new Set(dates)]
+    .filter((date) => partitionIndex.days?.[date] && !loadedDays.has(date));
+  if (!queue.length) return;
+  let completed = 0;
+  const total = queue.length;
+  const updateProgress = () => {
+    if (requestId === periodRequestId) {
+      setDataLoadState("loading", `Загрузка данных: ${completed} из ${total}`);
+    }
+  };
+  updateProgress();
+  const workers = Array.from({ length: Math.min(4, total) }, async () => {
+    while (queue.length) {
+      const date = queue.shift();
+      await fetchVerifiedDay(date);
+      completed += 1;
+      updateProgress();
+    }
+  });
+  const results = await Promise.allSettled(workers);
+  const failure = results.find((result) => result.status === "rejected");
+  if (failure) throw failure.reason;
 }
 
 function unavailableNotice(date) {
-  const incident = KNOWN_PROTOCOL_DATES.get(date) || dynamicUnavailableDates.get(date);
-  if (!incident) return null;
-  const normalized = normalizeProtocolIncident(incident);
-  const renderer = DASHBOARD_PROTOCOL[normalized.protocol];
-  return {
-    index: renderer.index,
-    title: renderer.title(date),
-    message: typeof renderer.message === "function" ? renderer.message(normalized) : renderer.message,
-    shortLabel: renderer.shortLabel,
-  };
+  return UNAVAILABLE_DATES.get(date) || dynamicUnavailableDates.get(date);
 }
 
 function isUnavailableDate(date) {
@@ -89,7 +193,6 @@ function renderAvailabilityState() {
   document.body.classList?.toggle("data-unavailable", Boolean(unavailable));
   $("unavailable-day").hidden = !unavailable;
   if (!unavailable) return false;
-  $("unavailable-day-index").textContent = unavailable.index;
   $("unavailable-day-title").textContent = unavailable.title;
   $("unavailable-day-message").textContent = unavailable.message;
   return true;
@@ -335,6 +438,22 @@ function ticketValue(row) {
   return row.tickets_exact ?? row.tickets_estimate ?? null;
 }
 
+function providerForSession(row) {
+  const provider = String(row?.provider || "").toLocaleLowerCase("ru");
+  if (provider === "skyline") return "skyline";
+  if (provider === "koronaticket" || provider === "korona") return "koronaticket";
+  if (provider === "bycard" || provider === "24afisha") return "bycard";
+  if (String(row?.sid || "").toLocaleLowerCase("ru").startsWith("koronaticket:")) {
+    return "koronaticket";
+  }
+  const cinemaId = Number(row?.cinema_id);
+  const cinema = String(row?.cinema || "").toLocaleLowerCase("ru");
+  if (cinemaId === 5179 || cinemaId === 5180 || cinema.includes("skyline")) {
+    return "skyline";
+  }
+  return "bycard";
+}
+
 function competitorName(cinema) {
   const name = String(cinema || "").toLocaleLowerCase("ru");
   if (name.includes("замок")) return "Замок";
@@ -555,25 +674,49 @@ function displayDateRange(rows) {
   return `${first} — ${last}`;
 }
 
-function renderSourceOverview(rows, silverRows, finalUsable) {
+function collectorSourceMetrics(discoveredRows, elapsedRows) {
+  const measuredRows = elapsedRows.filter((row) => ticketValue(row) !== null);
+  return {
+    discovered: discoveredRows.length,
+    measured: measuredRows.length,
+    missing: elapsedRows.length - measuredRows.length,
+    tickets: measuredRows.length
+      ? measuredRows.reduce((sum, row) => sum + ticketValue(row), 0)
+      : null,
+  };
+}
+
+function renderSourceOverview(rows, silverRows, elapsedRows) {
   const silverTickets = silverRows.reduce((sum, row) => sum + row.tickets, 0);
   const silverRevenue = silverRows.reduce((sum, row) => sum + row.revenue_byn, 0);
-  const bycardTickets = finalUsable.reduce((sum, row) => sum + (ticketValue(row) ?? 0), 0);
   $("ss-import-period").textContent = displayDateRange(silverRows);
-  $("ss-import-tickets").textContent = nf.format(silverTickets);
-  $("ss-import-revenue").textContent = money.format(silverRevenue);
-  $("ss-import-sessions").textContent = nf.format(silverRows.length);
-  $("bycard-import-period").textContent = displayDateRange(finalUsable);
-  $("bycard-import-tickets").textContent = nf.format(bycardTickets);
-  $("bycard-final-sessions").textContent = nf.format(finalUsable.length);
-  $("bycard-discovered-sessions").textContent = nf.format(rows.length);
+  $("ss-import-tickets").textContent = silverRows.length ? nf.format(silverTickets) : "—";
+  $("ss-import-revenue").textContent = silverRows.length ? money.format(silverRevenue) : "—";
+  $("ss-import-sessions").textContent = silverRows.length ? nf.format(silverRows.length) : "—";
 
+  const sourceCards = [
+    { provider: "bycard", id: "bycard" },
+    { provider: "koronaticket", id: "korona" },
+    { provider: "skyline", id: "skyline" },
+  ];
+  for (const card of sourceCards) {
+    const discovered = rows.filter((row) => providerForSession(row) === card.provider);
+    const elapsed = elapsedRows.filter((row) => providerForSession(row) === card.provider);
+    const metrics = collectorSourceMetrics(discovered, elapsed);
+    $(`${card.id}-import-period`).textContent = displayDateRange(discovered);
+    $(`${card.id}-import-tickets`).textContent = metrics.tickets === null
+      ? "—"
+      : nf.format(metrics.tickets);
+    const known = metrics.discovered > 0;
+    $(`${card.id}-discovered-sessions`).textContent = known ? nf.format(metrics.discovered) : "—";
+    $(`${card.id}-final-sessions`).textContent = known ? nf.format(metrics.measured) : "—";
+    $(`${card.id}-missing-sessions`).textContent = known ? nf.format(metrics.missing) : "—";
+  }
 }
 
 function renderShare(bycardRows, elapsed, usable, finalUsable, silverRows) {
   const silver = source.silver_screen || {};
   const silverReady = String(silver.status || "").startsWith("ready");
-  const backendReady = (source.market_share || {}).status === "ready";
   document.querySelectorAll(".market-card").forEach((card) => card.classList.remove("provisional"));
   const unavailable = (note) => {
     $("share").textContent = "—";
@@ -601,7 +744,7 @@ function renderShare(bycardRows, elapsed, usable, finalUsable, silverRows) {
   if (silverReady && silverRows.length && elapsed.length) {
     const coverage = usable.length / elapsed.length * 100;
     const strictCoverage = finalUsable.length / elapsed.length * 100;
-    if (coverage < 90 && !backendReady) {
+    if (coverage < 93) {
       const silverTickets = silverRows.reduce((sum, row) => sum + row.tickets, 0);
       const bycardTickets = finalUsable.reduce((sum, row) => sum + (ticketValue(row) ?? 0), 0);
       const observedMarket = silverTickets + bycardTickets;
@@ -686,7 +829,7 @@ function render() {
   const silverTickets = silverRows.reduce((sum, row) => sum + row.tickets, 0);
   const silverRevenue = silverRows.reduce((sum, row) => sum + row.revenue_byn, 0);
 
-  renderSourceOverview(rows, silverRows, usable);
+  renderSourceOverview(rows, silverRows, elapsed);
   renderCompetitors(elapsed, silverRows);
 
   $("tickets").textContent = nf.format(silverTickets + exactTickets + estimatedTickets);
@@ -778,16 +921,6 @@ function render() {
   const quality = {};
   for (const row of marketRows) quality[row.quality] = (quality[row.quality] || 0) + 1;
   const labels = {
-    exact_api_sales: "Точные продажи API",
-    availability_estimate: "Admissions · capacity − free",
-    closed_before_capture: "Закрыто до снимка",
-    general_admission_unverified: "Безместная схема · не проверена",
-    not_captured: "Нет финального снимка",
-    capture_failed: "Ошибка запроса",
-    source_anomaly: "Аномалия источника",
-    silver_screen_approved: "mooon · согласованная выгрузка",
-  };
-  Object.assign(labels, {
     exact_api_sales: "Точные продажи из API",
     availability_estimate: "Оценка по карте мест",
     closed_before_capture: "Закрыто до снимка",
@@ -796,7 +929,7 @@ function render() {
     capture_failed: "Ошибка запроса",
     source_anomaly: "Противоречивые данные источника",
     silver_screen_approved: "mooon · согласованная выгрузка",
-  });
+  };
   const qualityHelp = {
     exact_api_sales: "Источник передал количество проданных билетов напрямую. Это точное значение, а не расчёт по карте мест.",
     availability_estimate: "Оценка занятости по карте мест: считаются места, которые уже недоступны. Это не точное число продаж — среди них могут быть брони или технически закрытые места.",
@@ -814,7 +947,7 @@ function render() {
         <i class="quality-dot" aria-hidden="true"></i>
         <span class="quality-label">
           <span>${esc(labels[key] || key)}</span>
-          <button class="quality-tooltip-trigger" type="button" aria-label="Details: ${esc(labels[key] || key)}" aria-describedby="quality-tooltip-${esc(key)}" aria-expanded="false">
+          <button class="quality-tooltip-trigger" type="button" aria-label="Подробнее: ${esc(labels[key] || key)}" aria-describedby="quality-tooltip-${esc(key)}" aria-expanded="false">
             <span aria-hidden="true">i</span>
             <span class="quality-tooltip" id="quality-tooltip-${esc(key)}" role="tooltip">${esc(qualityHelp[key] || "Дополнительное пояснение для этой категории пока не добавлено.")}</span>
           </button>
@@ -846,66 +979,143 @@ function bindQualityTooltips() {
   });
 }
 
-async function init() {
-  const dataUrl = document.body.dataset.dataUrl || "data/market.json";
-  source = await fetch(dataUrl, { cache: "no-store" }).then((response) => {
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
-  });
-  for (const row of [...(source.sessions || []), ...(source.silver_screen?.sessions || [])]) {
-    row.region = canonicalRegion(row.region, row.city);
+async function loadInitialSource() {
+  const legacyUrl = resolveUrl(document.body.dataset.dataUrl || "data/market.json");
+  const indexUrl = marketIndexUrl(legacyUrl);
+  const indexResponse = await fetch(indexUrl, { cache: "no-store" });
+  if (indexResponse.status === 404) {
+    const legacyResponse = await fetch(legacyUrl, { cache: "no-store" });
+    if (!legacyResponse.ok) throw new Error(`Не удалось загрузить данные: HTTP ${legacyResponse.status}.`);
+    const payload = await legacyResponse.json();
+    const marketRows = payload.market_sessions ?? payload.sessions ?? [];
+    if (!Array.isArray(marketRows) || !Array.isArray(payload.silver_screen?.sessions ?? [])) {
+      throw new Error("Некорректный формат файла market.json.");
+    }
+    payload.sessions = normalizeRows(marketRows);
+    payload.silver_screen = {
+      ...(payload.silver_screen || {}),
+      sessions: normalizeRows(payload.silver_screen?.sessions || []),
+    };
+    dataMode = "legacy";
+    return payload;
   }
-  $("updated").textContent = `Обновлено ${new Date(source.meta.generated_at).toLocaleString("ru-RU")}`;
-  const allSilverRows = source.silver_screen?.sessions || [];
-  const silverDates = unique(allSilverRows, "date").sort();
-  const marketDates = unique(source.sessions || [], "date").sort();
+  if (!indexResponse.ok) {
+    throw new Error(`Не удалось загрузить индекс данных: HTTP ${indexResponse.status}.`);
+  }
+  const index = await indexResponse.json();
+  if (!Array.isArray(index.reporting_dates) || !index.days || typeof index.days !== "object") {
+    throw new Error("Некорректный формат индекса данных.");
+  }
+  const reportingDates = [...new Set(index.reporting_dates)]
+    .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))
+    .sort();
+  if (!reportingDates.length) throw new Error("В индексе нет опубликованных дат.");
+  partitionIndex = { ...index, reporting_dates: reportingDates, __url: indexUrl };
+  const { sessions, market_sessions: marketSessions, ...basePayload } = index;
+  const { sessions: silverSessions, ...silverBase } = index.silver_screen || {};
+  source = {
+    ...basePayload,
+    sessions: [],
+    silver_screen: { ...silverBase, sessions: [] },
+  };
+  dataMode = "partitioned";
+  return source;
+}
+
+function configureReportingDates() {
   const generatedDay = source.meta.generated_at.slice(0, 10);
   const yesterday = minskDay(-1);
-  dynamicUnavailableDates = new Map(
-    (source.data_quality_incidents || [])
-      .filter((incident) => incident?.date)
-      .map((incident) => [incident.date, normalizeProtocolIncident(incident)]),
-  );
-  const collectedDates = [...new Set([...silverDates, ...marketDates])]
+  const sourceDates = dataMode === "partitioned"
+    ? partitionIndex.reporting_dates
+    : [...new Set([
+      ...unique(source.silver_screen?.sessions || [], "date"),
+      ...unique(source.sessions || [], "date"),
+    ])];
+  const collectedDates = sourceDates
     .filter((value) => value >= REPORTING_START_DATE && value <= generatedDay && !isUnavailableDate(value));
-  if (yesterday >= REPORTING_START_DATE && !collectedDates.includes(yesterday) && !unavailableNotice(yesterday)) {
-    dynamicUnavailableDates.set(yesterday, { protocol: "no_data" });
+  dynamicUnavailableDates = new Map();
+  if (yesterday >= REPORTING_START_DATE && !collectedDates.includes(yesterday) && !UNAVAILABLE_DATES.has(yesterday)) {
+    dynamicUnavailableDates.set(yesterday, {
+      title: `Нет данных за ${formatDay(yesterday)}`,
+      message: "День ещё не опубликован в dashboard.",
+    });
   }
-  const reportingDates = [...new Set([...collectedDates, ...KNOWN_PROTOCOL_DATES.keys(), ...dynamicUnavailableDates.keys()])]
-    .sort()
-    .reverse();
+  const reportingDates = [...new Set([
+    ...collectedDates,
+    ...UNAVAILABLE_DATES.keys(),
+    ...dynamicUnavailableDates.keys(),
+  ])].sort().reverse();
   reportingDateSet = new Set(reportingDates);
   periodDateOptions = reportingDates;
-  const yesterdayPeriod = `d:${yesterday}`;
-  const currentReleaseWeekPeriod = `w:${releaseWeekStartForDay(minskDay(0))}`;
-  const validRows = [...(source.sessions || []), ...(source.silver_screen?.sessions || [])]
-    .filter((row) => collectedDates.includes(row.date));
-  periodWeekOptions = [...validRows.reduce((weeks, row) => {
-    const week = row.release_week || releaseWeekStartForDay(row.date);
-    if (!week) return weeks;
+  periodWeekOptions = [...collectedDates.reduce((weeks, date) => {
+    const week = releaseWeekStartForDay(date);
     if (!weeks.has(week)) weeks.set(week, new Set());
-    weeks.get(week).add(row.date);
+    weeks.get(week).add(date);
     return weeks;
   }, new Map()).entries()]
     .map(([value, days]) => ({ value, days: days.size }))
     .sort((a, b) => b.value.localeCompare(a.value));
+  const currentReleaseWeekPeriod = `w:${releaseWeekStartForDay(minskDay(0))}`;
   $("period").innerHTML = '<option value="">Весь период</option>'
-    + `<option value="r:last7">Последние 7 дней</option>`
+    + '<option value="r:last7">Последние 7 дней</option>'
     + `<option value="${esc(currentReleaseWeekPeriod)}">Текущая прокатная неделя</option>`
-    + reportingDates
-    .map((value) => {
+    + reportingDates.map((value) => {
       const label = new Date(`${value}T00:00:00`).toLocaleDateString("ru-RU")
         + (isUnavailableDate(value) ? " · нет данных" : "");
       return `<option value="d:${esc(value)}">${esc(label)}</option>`;
-    })
-    .join("")
+    }).join("")
     + periodWeekOptions
     .map((week) => `<option value="w:${esc(week.value)}">Прокатная неделя ${esc(releaseWeekLabel(week.value))}</option>`)
     .join("");
-  const defaultDate = reportingDates.includes(yesterday)
-    ? yesterday
-    : [...collectedDates].filter((date) => date <= yesterday).sort().reverse()[0] || reportingDates[0];
-  if (defaultDate) $("period").value = `d:${defaultDate}`;
+  const requestedDefault = dataMode === "partitioned" ? partitionIndex.default_date : null;
+  const defaultDate = collectedDates.includes(requestedDefault)
+    ? requestedDefault
+    : reportingDates.includes(yesterday)
+      ? yesterday
+      : [...collectedDates].filter((date) => date <= yesterday).sort().reverse()[0] || reportingDates[0];
+  return defaultDate ? `d:${defaultDate}` : "";
+}
+
+async function handlePeriodChange() {
+  const requestedPeriod = $("period").value;
+  if (dataMode !== "partitioned") {
+    activePeriodValue = requestedPeriod;
+    refreshFilterOptions();
+    renderPeriodControl();
+    render();
+    return;
+  }
+  const requestId = ++periodRequestId;
+  try {
+    await loadPartitionDates(datesForPeriod(requestedPeriod), requestId);
+    if (requestId !== periodRequestId) return;
+    activePeriodValue = requestedPeriod;
+    refreshFilterOptions();
+    renderPeriodControl();
+    render();
+    clearDataLoadState();
+  } catch (error) {
+    if (requestId !== periodRequestId) return;
+    $("period").value = activePeriodValue;
+    renderPeriodControl();
+    setDataLoadState("error", `${error.message} Ранее загруженные данные сохранены.`);
+    $("data-load-state")?.focus?.();
+    console.error(error);
+  }
+}
+
+async function init() {
+  setDataLoadState("loading", "Загрузка данных…");
+  source = await loadInitialSource();
+  if (!source.meta?.generated_at) throw new Error("В данных отсутствует время обновления.");
+  $("updated").textContent = `Обновлено ${new Date(source.meta.generated_at).toLocaleString("ru-RU")}`;
+  const defaultPeriod = configureReportingDates();
+  if (dataMode === "partitioned" && defaultPeriod) {
+    const requestId = ++periodRequestId;
+    await loadPartitionDates(datesForPeriod(defaultPeriod), requestId);
+  }
+  $("period").value = defaultPeriod;
+  activePeriodValue = defaultPeriod;
   refreshFilterOptions();
   renderPeriodControl();
   document.addEventListener("click", (event) => {
@@ -914,17 +1124,40 @@ async function init() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closePeriodPopover();
   });
-  document.querySelectorAll("select").forEach((select) => select.addEventListener("change", () => {
-    refreshFilterOptions();
-    renderPeriodControl();
-    render();
-  }));
+  $("period").addEventListener("change", handlePeriodChange);
+  for (const id of ["region", "city", "cinema", "film"]) {
+    $(id).addEventListener("change", () => {
+      refreshFilterOptions();
+      renderPeriodControl();
+      render();
+    });
+  }
   bindQualityTooltips();
   render();
+  clearDataLoadState();
 }
 
-init().catch((error) => {
+let initializationError = null;
+const dashboardReady = init().catch((error) => {
+  initializationError = error;
   $("updated").textContent = "Ошибка данных";
   $("subtitle").textContent = error.message;
+  setDataLoadState("error", error.message);
   console.error(error);
 });
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    ready: dashboardReady,
+    selectPeriod,
+    handlePeriodChange,
+    state: () => ({
+      dataMode,
+      loadedDates: [...loadedDays.keys()].sort(),
+      activePeriodValue,
+      initializationError,
+    }),
+    providerForSession,
+    collectorSourceMetrics,
+  };
+}

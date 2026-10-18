@@ -20,9 +20,9 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="../styles.css?v=quality-tooltips-20260916-2">
+    <link rel="stylesheet" href="../styles.css?v=partition-loader-20261016-1">
   </head>
-  <body class="dashboard-page" data-data-url="../data/market.json">
+  <body class="dashboard-page" data-index-url="../data/market-index.json" data-data-url="../data/market.json">
     <header class="app-chrome">
       <nav class="nav-pill" aria-label="Навигация по отчёту">
         <a class="brand" href="#overview" aria-label="Cinemalab Market Intelligence">
@@ -72,8 +72,9 @@
     </header>
 
     <main class="shell">
+      <div class="data-load-state" id="data-load-state" role="status" aria-live="polite" aria-atomic="true" tabindex="-1" hidden></div>
       <section class="unavailable-day" id="unavailable-day" hidden aria-live="polite">
-        <span class="unavailable-day__index" id="unavailable-day-index">Данные недоступны</span>
+        <span class="unavailable-day__index">Данные недоступны</span>
         <h1 id="unavailable-day-title">Нет данных за выбранный день</h1>
         <p id="unavailable-day-message"></p>
         <small>Показатели рынка и доля mooon не рассчитываются по неполной выборке.</small>
@@ -185,15 +186,25 @@
           </article>
           <article class="source-card source-bycard">
             <header><div><strong>ByCard · 24Афиша</strong><span id="bycard-import-period">—</span></div></header>
-            <div class="source-primary"><strong id="bycard-import-tickets">—</strong><span>билетов точно + proxy</span></div>
-            <dl><div><dt>Снимки с цифрами</dt><dd id="bycard-final-sessions">—</dd></div><div><dt>Сеансы найдены</dt><dd id="bycard-discovered-sessions">—</dd></div></dl>
+            <div class="source-primary"><strong id="bycard-import-tickets">—</strong><span>собрано билетов · точно + оценка</span></div>
+            <dl class="source-metrics"><div><dt>Сеансы найдены</dt><dd id="bycard-discovered-sessions">—</dd></div><div><dt>Измерено</dt><dd id="bycard-final-sessions">—</dd></div><div><dt>Без финальных данных</dt><dd id="bycard-missing-sessions">—</dd></div></dl>
+          </article>
+          <article class="source-card source-korona">
+            <header><div><strong>Korona Tickets</strong><span id="korona-import-period">—</span></div></header>
+            <div class="source-primary"><strong id="korona-import-tickets">—</strong><span>собрано билетов · точные данные</span></div>
+            <dl class="source-metrics"><div><dt>Сеансы найдены</dt><dd id="korona-discovered-sessions">—</dd></div><div><dt>Измерено</dt><dd id="korona-final-sessions">—</dd></div><div><dt>Без финальных данных</dt><dd id="korona-missing-sessions">—</dd></div></dl>
+          </article>
+          <article class="source-card source-skyline">
+            <header><div><strong>Skyline</strong><span id="skyline-import-period">—</span></div></header>
+            <div class="source-primary"><strong id="skyline-import-tickets">—</strong><span>собрано билетов · точно + оценка</span></div>
+            <dl class="source-metrics"><div><dt>Сеансы найдены</dt><dd id="skyline-discovered-sessions">—</dd></div><div><dt>Измерено</dt><dd id="skyline-final-sessions">—</dd></div><div><dt>Без финальных данных</dt><dd id="skyline-missing-sessions">—</dd></div></dl>
           </article>
           <article class="quality-panel"><header class="panel-heading"><div><h3>Качество сбора</h3><p>Точность и полнота наблюдений</p></div></header><div id="quality"></div></article>
         </div>
       </section>
 
-      <footer><strong>Доля рынка, динамика и качество данных — в одном срезе.</strong><span>Cinemalab Market Intelligence · ByCard / 24Афиша · mooon</span></footer>
+      <footer><strong>Доля рынка, динамика и качество данных — в одном срезе.</strong><span>Cinemalab Market Intelligence · mooon · ByCard · Korona · Skyline</span></footer>
     </main>
-    <script src="../app.js?v=quality-tooltips-20260916-2"></script>
+    <script src="../app.js?v=partition-loader-20261016-1"></script>
   </body>
 </html>
