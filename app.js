@@ -1032,6 +1032,65 @@ async function loadInitialSource() {
   return source;
 }
 
+function incidentUnavailableMessage(incident) {
+  const number = (value) => (typeof value === "number" || (typeof value === "string" && value.trim() !== ""))
+    && Number.isFinite(Number(value)) ? Number(value) : null;
+  const threshold = number(incident.threshold_pct);
+  const coverage = number(incident.coverage_pct);
+  const usable = number(incident.usable_sessions);
+  const total = number(incident.total_sessions);
+  const suffix = "День не опубликован как валидный.";
+  if (incident.reason === "required_source_preparation_failed") {
+    return `Не удалось загрузить или обработать данные обязательного источника. ${suffix}`;
+  }
+  const labels = { bycard: "ByCard", skyline: "Skyline", koronaticket: "Korona", korona: "Korona", overall: "Рынок" };
+  const reasons = {
+    unavailable: "данные источника недоступны",
+    zero_sessions_unverified: "отсутствие сеансов не подтверждено",
+    no_sessions: "нет подтверждённых сеансов",
+    scope_anchor_unconfirmed: "не подтверждён согласованный состав кинотеатров",
+    scope_anchor_missing: "нет подтверждения состава кинотеатров",
+    scope_anchor_stale: "истекло подтверждение состава кинотеатров",
+    observed_catalog_strict_subset: "получен неполный каталог кинотеатров",
+    catalogue_change_unconfirmed: "изменение каталога не подтверждено",
+  };
+  const parts = [];
+  for (const failure of Array.isArray(incident.quality_failures) ? incident.quality_failures : []) {
+    if (typeof failure !== "string") continue;
+    const [provider, rule] = failure.split(":");
+    // Overall coverage is described below only when the numbers prove it.
+    if (provider === "overall" && rule === "coverage_below_threshold") continue;
+    const quality = incident.source_quality?.[provider] || {};
+    const measured = number(quality.coverage_pct);
+    const count = number(quality.usable);
+    const all = number(quality.total);
+    let explanation;
+    if (rule === "schedule_evidence_incomplete") {
+      const evidence = quality.schedule_evidence || {};
+      explanation = reasons[evidence.reason || evidence.scope_anchor?.reason] || "не подтверждена полнота расписания";
+    } else if (rule === "coverage_below_threshold") {
+      explanation = measured !== null && measured >= 0 && measured <= 100 && threshold !== null
+        && measured < threshold && all > 0
+        ? `покрытие ${nf.format(measured)}% ниже порога ${nf.format(threshold)}%`
+        : "проверка покрытия источника не пройдена";
+    } else {
+      explanation = reasons[rule] || "проверка обязательного источника не пройдена";
+    }
+    const counts = Number.isInteger(count) && Number.isInteger(all) && count >= 0 && all > 0 && count <= all
+      ? ` (${nf.format(count)} из ${nf.format(all)} сеансов)` : "";
+    parts.push(`${labels[provider] || "Источник"}: ${explanation}${counts}.`);
+  }
+  const overallBelow = coverage !== null && coverage >= 0 && coverage <= 100
+    && threshold !== null && threshold > 0 && threshold <= 100 && coverage < threshold && total > 0;
+  if (overallBelow) {
+    const counts = Number.isInteger(usable) && Number.isInteger(total) && usable >= 0 && usable <= total
+      ? ` — ${nf.format(usable)} из ${nf.format(total)} сеансов` : "";
+    parts.push(`Финальное покрытие рынка ${nf.format(coverage)}%${counts}, ниже порога ${nf.format(threshold)}%.`);
+  }
+  return parts.length ? `${[...new Set(parts)].join(" ")} ${suffix}`
+    : `День не прошёл проверку качества. ${suffix}`;
+}
+
 function configureReportingDates() {
   const generatedDay = source.meta.generated_at.slice(0, 10);
   const yesterday = minskDay(-1);
@@ -1046,19 +1105,9 @@ function configureReportingDates() {
     const date = String(incident?.date || "");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
     if (incident.status !== "data_quality_incident" && !incident.excluded_from_period_aggregates) continue;
-    const metrics = [
-      incident.coverage_pct,
-      incident.threshold_pct,
-      incident.usable_sessions,
-      incident.total_sessions,
-    ];
-    const hasCoverage = metrics.every((value) => value !== null && value !== "" && Number.isFinite(Number(value)));
-    const [coverage, threshold, usable, total] = metrics.map(Number);
     dynamicUnavailableDates.set(date, {
       title: `Нет данных за ${formatLongDay(date)}`,
-      message: hasCoverage
-        ? `Финальное покрытие рынка ${nf.format(coverage)}% — ${nf.format(usable)} из ${nf.format(total)} сеансов, ниже порога ${nf.format(threshold)}%, поэтому день не опубликован как валидный.`
-        : "День не прошёл проверку качества и не опубликован как валидный.",
+      message: incidentUnavailableMessage(incident),
     });
   }
   const collectedDates = sourceDates
@@ -1191,5 +1240,6 @@ if (typeof module !== "undefined" && module.exports) {
     }),
     providerForSession,
     collectorSourceMetrics,
+    incidentUnavailableMessage,
   };
 }
