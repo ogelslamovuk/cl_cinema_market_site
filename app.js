@@ -133,11 +133,12 @@ async function fetchVerifiedDay(date) {
 }
 
 function datesForPeriod(value) {
-  const dates = partitionIndex?.reporting_dates || [];
   if (value.startsWith("d:")) {
     const date = value.slice(2);
     return isUnavailableDate(date) ? [] : [date];
   }
+  const cutoff = publishedPeriodCutoff();
+  const dates = (partitionIndex?.reporting_dates || []).filter((date) => cutoff && date <= cutoff);
   if (value.startsWith("w:")) {
     const week = value.slice(2);
     return dates.filter((date) => !isUnavailableDate(date) && releaseWeekStartForDay(date) === week);
@@ -195,6 +196,7 @@ function renderAvailabilityState() {
   const unavailable = selectedUnavailableDate();
   document.body.classList?.toggle("data-unavailable", Boolean(unavailable));
   $("unavailable-day").hidden = !unavailable;
+  if (unavailable && $("market-quality-state")) $("market-quality-state").hidden = true;
   if (!unavailable) return false;
   $("unavailable-day-title").textContent = unavailable.title;
   $("unavailable-day-message").textContent = unavailable.message;
@@ -395,9 +397,24 @@ function selectedSilverRows() {
   return filterRows(source.silver_screen?.sessions || []);
 }
 
+function publishedPeriodCutoff() {
+  // Publication metadata is authoritative. Never derive readiness from row
+  // presence, today's clock, or browser-side coverage arithmetic.
+  const published = partitionIndex?.default_date;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(published || "")) return published;
+  return Object.entries(source?.market_quality_by_date || {})
+    .filter(([date, assessment]) => /^\d{4}-\d{2}-\d{2}$/.test(date)
+      && ["GREEN", "YELLOW"].includes(assessment?.status) && assessment.publishable === true)
+    .map(([date]) => date).sort().at(-1) || null;
+}
+
 function filterRows(inputRows) {
   let rows = inputRows.filter((row) => reportingDateSet.has(row.date) && !isUnavailableDate(row.date));
   const period = $("period").value;
+  if (!period.startsWith("d:")) {
+    const cutoff = publishedPeriodCutoff();
+    rows = rows.filter((row) => cutoff && row.date <= cutoff);
+  }
   if (period.startsWith("d:")) rows = rows.filter((row) => row.date === period.slice(2));
   if (period.startsWith("w:")) rows = rows.filter((row) => row.release_week === period.slice(2));
   if (period === "r:last7") {
@@ -416,6 +433,10 @@ function rowsForSelectedPeriod() {
   let rows = [...(source.sessions || []), ...(source.silver_screen?.sessions || [])]
     .filter((row) => reportingDateSet.has(row.date) && !isUnavailableDate(row.date));
   const period = $("period").value;
+  if (!period.startsWith("d:")) {
+    const cutoff = publishedPeriodCutoff();
+    rows = rows.filter((row) => cutoff && row.date <= cutoff);
+  }
   if (period.startsWith("d:")) rows = rows.filter((row) => row.date === period.slice(2));
   if (period.startsWith("w:")) rows = rows.filter((row) => row.release_week === period.slice(2));
   if (period === "r:last7") {
@@ -475,6 +496,7 @@ function competitorName(cinema) {
 }
 
 function renderCompetitors(bycardRows, mooonRows) {
+  const sharesAllowed = ["GREEN", "YELLOW"].includes(selectedMarketQuality().status);
   const order = ["mooon", "Skyline", "Falcon Club", "Prizma", "КВП", "Замок", "Корона-Сити"];
   const groups = Object.fromEntries(order.map((name) => [name, {
     name, sessions: 0, measured: 0, tickets: 0,
@@ -502,8 +524,8 @@ function renderCompetitors(bycardRows, mooonRows) {
   const marketRevenueMax = order.reduce((sum, name) => sum + groups[name].revenueMax, 0);
   $("competitor-cards").innerHTML = order.map((name) => {
     const group = groups[name];
-    const ticketShare = marketTickets ? group.tickets / marketTickets * 100 : null;
-    const revenueShare = marketRevenueMax
+    const ticketShare = sharesAllowed && marketTickets ? group.tickets / marketTickets * 100 : null;
+    const revenueShare = sharesAllowed && marketRevenueMax
       ? `${(group.revenueMax / marketRevenueMax * 100).toFixed(1)}%`
       : "—";
     const coverage = group.sessions ? group.measured / group.sessions * 100 : null;
@@ -647,11 +669,12 @@ function renderDailyTrend(bycardRows, silverRows) {
   const labelIndexes = [...new Set([0, Math.floor((days.length - 1) / 2), days.length - 1])];
   const formatDay = (value) => new Date(`${value}T00:00:00`).toLocaleDateString("ru-RU", { day: "2-digit", month: "short" });
   const latest = days.at(-1);
-  const latestShare = latest.market ? latest.silver / latest.market * 100 : 0;
+  const latestShare = latest.market && ["GREEN", "YELLOW"].includes(selectedMarketQuality().status)
+    ? `${(latest.silver / latest.market * 100).toFixed(1)}%` : "не рассчитана";
   $("daily-trend").innerHTML = `
     <svg class="trend-svg" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="trend-title trend-desc">
       <title id="trend-title">Динамика проданных билетов</title>
-      <desc id="trend-desc">Период ${formatDay(days[0].day)} — ${formatDay(latest.day)}. Последний день: рынок ${nf.format(latest.market)}, mooon ${nf.format(latest.silver)}, доля ${latestShare.toFixed(1)}%.</desc>
+      <desc id="trend-desc">Период ${formatDay(days[0].day)} — ${formatDay(latest.day)}. Последний день: рынок ${nf.format(latest.market)}, mooon ${nf.format(latest.silver)}, доля ${latestShare}.</desc>
       ${[0, .25, .5, .75, 1].map((tick) => {
         const y = inset.top + plotHeight * tick;
         return `<line class="trend-grid" x1="${inset.left}" y1="${y}" x2="${width - inset.right}" y2="${y}"></line>`;
@@ -724,7 +747,41 @@ function renderSourceOverview(rows, silverRows, elapsedRows) {
   }
 }
 
+function selectedMarketQuality() {
+  // A filter is a view, not a new market denominator or scope confirmation.
+  const period = $("period").value;
+  const dates = period.startsWith("d:") ? [period.slice(2)]
+    : [...new Set(rowsForSelectedPeriod().map((row) => row.date))];
+  const assessments = dates.map((date) => source.market_quality_by_date?.[date]);
+  const statuses = assessments.map((row) => row?.status || "UNKNOWN");
+  const status = !statuses.length || statuses.includes("UNKNOWN") ? "UNKNOWN"
+    : statuses.includes("RED") ? "RED" : statuses.includes("YELLOW") ? "YELLOW" : "GREEN";
+  return { status, dates, assessments };
+}
+
+function renderMarketQuality() {
+  const quality = selectedMarketQuality();
+  const banner = $("market-quality-state");
+  if (!banner) return quality;
+  const dateLabel = quality.dates.length === 1 ? formatDay(quality.dates[0]) : "Выбранный период";
+  const row = quality.assessments.length === 1 ? quality.assessments[0] : null;
+  const counts = row && Number.isInteger(row.usable) && Number.isInteger(row.total)
+    ? ` · ${nf.format(row.usable)}/${nf.format(row.total)}`
+      + (row.coverage_pct === null ? "" : ` = ${nf.format(row.coverage_pct)}%`) : "";
+  const messages = {
+    GREEN: "Зелёный отчёт · полнота рынка подтверждена",
+    YELLOW: "Жёлтый отчёт · неполная рыночная выборка. Доли и сравнения ограниченно надёжны",
+    RED: "Недостаточно данных · полноценный отчёт не готов. Показаны только измеренные факты; доли скрыты",
+    UNKNOWN: "Качество не подтверждено · нет проверенного состава рынка, данных mooon или завершённых сеансов. Доли скрыты",
+  };
+  banner.hidden = false;
+  banner.setAttribute("data-quality", quality.status);
+  banner.textContent = `${dateLabel}${counts} · ${messages[quality.status]}`;
+  return quality;
+}
+
 function renderShare(bycardRows, elapsed, usable, finalUsable, silverRows) {
+  const quality = renderMarketQuality();
   const silver = source.silver_screen || {};
   const silverReady = String(silver.status || "").startsWith("ready");
   document.querySelectorAll(".market-card").forEach((card) => card.classList.remove("provisional"));
@@ -736,44 +793,29 @@ function renderShare(bycardRows, elapsed, usable, finalUsable, silverRows) {
     $("revenue-share-note").textContent = note;
     $("revenue-share-track").style.width = "0";
   };
+  if (!["GREEN", "YELLOW"].includes(quality.status)) {
+    unavailable(quality.status === "RED" ? "Недостаточно данных для полноценного отчёта" : "Полнота рынка и данные mooon не подтверждены");
+    return;
+  }
   if (silverReady && silverRows.length && bycardRows.length === 0) {
-    const mooonTickets = silverRows.reduce((sum, row) => sum + row.tickets, 0);
-    const mooonRevenue = silverRows.reduce((sum, row) => sum + row.revenue_byn, 0);
-    $("share").textContent = mooonTickets ? "100.0%" : "—";
-    $("share-note").textContent = mooonTickets
-      ? `mooon ${nf.format(mooonTickets)} · конкуренты 0`
-      : "В выбранном разрезе нет проданных билетов";
-    $("share-track").style.width = mooonTickets ? "100%" : "0";
-    $("revenue-share").textContent = mooonRevenue ? "100.0%" : "—";
-    $("revenue-share-note").textContent = mooonRevenue
-      ? `mooon ${money.format(mooonRevenue)} · конкуренты 0`
-      : "В выбранном разрезе нет кассы";
-    $("revenue-share-track").style.width = mooonRevenue ? "100%" : "0";
+    // A verified market may have a mooon-only filtered slice. This is not
+    // evidence that an unverified empty competitor catalogue is complete.
+    const tickets = silverRows.reduce((sum, row) => sum + row.tickets, 0);
+    const revenue = silverRows.reduce((sum, row) => sum + row.revenue_byn, 0);
+    $("share").textContent = tickets ? "100.0%" : "—";
+    $("share-note").textContent = tickets ? `mooon ${nf.format(tickets)} · в выбранном разрезе конкуренты 0` : "В выбранном разрезе нет проданных билетов";
+    $("share-track").style.width = tickets ? "100%" : "0";
+    $("revenue-share").textContent = revenue ? "100.0%" : "—";
+    $("revenue-share-note").textContent = revenue ? `mooon ${money.format(revenue)} · в выбранном разрезе конкуренты 0` : "В выбранном разрезе нет кассы";
+    $("revenue-share-track").style.width = revenue ? "100%" : "0";
+    if (quality.status === "YELLOW") {
+      $("share-note").textContent = "Неполная выборка · ограниченная надёжность. " + $("share-note").textContent;
+      $("revenue-share-note").textContent = "Неполная выборка · ограниченная надёжность. " + $("revenue-share-note").textContent;
+      document.querySelectorAll(".market-card").forEach((card) => card.classList.add("provisional"));
+    }
     return;
   }
   if (silverReady && silverRows.length && elapsed.length) {
-    const coverage = usable.length / elapsed.length * 100;
-    const strictCoverage = finalUsable.length / elapsed.length * 100;
-    if (coverage < 93) {
-      const silverTickets = silverRows.reduce((sum, row) => sum + row.tickets, 0);
-      const bycardTickets = finalUsable.reduce((sum, row) => sum + (ticketValue(row) ?? 0), 0);
-      const observedMarket = silverTickets + bycardTickets;
-      const ticketShare = observedMarket ? silverTickets / observedMarket * 100 : null;
-      const silverRevenue = silverRows.reduce((sum, row) => sum + row.revenue_byn, 0);
-      const bycardRevenue = finalUsable.reduce(
-        (sum, row) => sum + (row.revenue_exact_byn ?? row.revenue_estimate_max_byn ?? 0), 0,
-      );
-      const observedRevenue = silverRevenue + bycardRevenue;
-      const revenueShare = observedRevenue ? silverRevenue / observedRevenue * 100 : null;
-      $("share").textContent = ticketShare === null ? "—" : `${ticketShare.toFixed(1)}%`;
-      $("share-note").textContent = `Оценка по доступным данным · пригодно ${usable.length} из ${elapsed.length} (${coverage.toFixed(1)}%) · strict-final ${strictCoverage.toFixed(1)}%`;
-      $("share-track").style.width = ticketShare === null ? "0" : `${ticketShare}%`;
-      $("revenue-share").textContent = revenueShare === null ? "—" : `${revenueShare.toFixed(1)}%`;
-      $("revenue-share-note").textContent = `Не итоговая доля · учтено ${nf.format(bycardTickets)} Admissions конкурентов`;
-      $("revenue-share-track").style.width = revenueShare === null ? "0" : `${revenueShare}%`;
-      document.querySelectorAll(".market-card").forEach((card) => card.classList.add("provisional"));
-      return;
-    }
     const silverTickets = silverRows.reduce((sum, row) => sum + row.tickets, 0);
     const bycardTickets = usable.reduce((sum, row) => sum + (ticketValue(row) ?? 0), 0);
     const observedMarket = silverTickets + bycardTickets;
@@ -804,6 +846,12 @@ function renderShare(bycardRows, elapsed, usable, finalUsable, silverRows) {
       $("revenue-share-note").textContent = `${money.format(silverRevenue)} Revenue mooon из ${money.format(marketRevenueMax)} Revenue рынка`;
       $("revenue-share-track").style.width = `${Math.max(0, Math.min(100, revenueShare))}%`;
     }
+    if (quality.status === "YELLOW") {
+      const warning = "Оценка по неполной выборке · доли и сравнения ограниченно надёжны. ";
+      $("share-note").textContent = warning + $("share-note").textContent;
+      $("revenue-share-note").textContent = warning + $("revenue-share-note").textContent;
+      document.querySelectorAll(".market-card").forEach((card) => card.classList.add("provisional"));
+    }
     return;
   }
   if (!silverReady) {
@@ -821,6 +869,7 @@ function renderShare(bycardRows, elapsed, usable, finalUsable, silverRows) {
 function render() {
   if (renderAvailabilityState()) return;
   const rows = selectedRows();
+  const sharesAllowed = ["GREEN", "YELLOW"].includes(selectedMarketQuality().status);
   const generatedAt = new Date(source.meta.generated_at).getTime();
   const silverRows = selectedSilverRows().filter(
     (row) => new Date(row.starts_at).getTime() <= generatedAt,
@@ -914,8 +963,8 @@ function render() {
       <span class="number">${nf.format(film.otherTickets)}</span>
       <span class="number">${nf.format(Math.round(film.marketRevenue))}</span>
       <span class="number">${nf.format(Math.round(film.silverRevenue))}</span>
-      <span class="number">${film.silverSharePct === null ? "—" : `${film.silverSharePct.toFixed(1)}%`}</span>
-      <span class="number">${film.marketSharePct === null ? "—" : `${film.marketSharePct.toFixed(1)}%`}</span>
+      <span class="number">${!sharesAllowed || film.silverSharePct === null ? "—" : `${film.silverSharePct.toFixed(1)}%`}</span>
+      <span class="number">${!sharesAllowed || film.marketSharePct === null ? "—" : `${film.marketSharePct.toFixed(1)}%`}</span>
       <span class="release-state ${film.releaseScope}">${releaseLabels[film.releaseScope]}</span>
     </div>`).join("");
 

@@ -3,6 +3,9 @@
 @import url("tokens.css");
 
 * { box-sizing: border-box; }
+.market-quality-state { margin: 1rem 0; padding: 1rem; border: 1px solid var(--rule); border-radius: var(--radius-sm, .75rem); color: var(--ink); background: var(--nav-surface); overflow-wrap: anywhere; }
+.market-quality-state[data-quality="YELLOW"] { border-color: var(--warning); color: var(--warning); }
+.market-quality-state[data-quality="RED"], .market-quality-state[data-quality="UNKNOWN"] { border-color: var(--accent-bright); }
 html { scroll-behavior: smooth; overflow-x: clip; }
 body {
   margin: 0;
