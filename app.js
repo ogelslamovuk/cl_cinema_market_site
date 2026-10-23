@@ -485,11 +485,14 @@ function providerForSession(row) {
   return "bycard";
 }
 
-function competitorName(cinema) {
-  const name = String(cinema || "").toLocaleLowerCase("ru");
+function competitorName(row) {
+  // Provider is the confirmed owner; a display-name change must not move sales.
+  const provider = String(row?.provider || "").toLocaleLowerCase("ru");
+  if (provider === "skyline") return "Skyline";
+  const name = String(row?.cinema || "").toLocaleLowerCase("ru");
   if (name.includes("замок")) return "Замок";
   if (name.includes("корона-сити") || name.includes("корона сити")) return "Корона-Сити";
-  if (name.includes("skyline")) return "Skyline";
+  if (!provider && name.includes("skyline")) return "Skyline";
   if (name.includes("falcon club")) return "Falcon Club";
   if (name.includes("prizma")) return "Prizma";
   return "КВП";
@@ -511,7 +514,7 @@ function renderCompetitors(bycardRows, mooonRows) {
     group.revenueMax += row.revenue_byn || 0;
   }
   for (const row of bycardRows) {
-    const group = groups[competitorName(row.cinema)];
+    const group = groups[competitorName(row)];
     group.sessions += 1;
     const tickets = ticketValue(row);
     if (tickets === null) continue;
