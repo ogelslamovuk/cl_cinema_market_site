@@ -815,7 +815,10 @@ function renderShare(bycardRows, elapsed, usable, finalUsable, silverRows) {
     }
     return;
   }
-  if (silverReady && silverRows.length && elapsed.length) {
+  // Global dated quality already proves the complete mooon import. An empty
+  // filtered own slice is a verified zero, not a missing source (e.g. a city
+  // without a mooon cinema). A zero market denominator still stays unavailable.
+  if (silverReady && elapsed.length) {
     const silverTickets = silverRows.reduce((sum, row) => sum + row.tickets, 0);
     const bycardTickets = usable.reduce((sum, row) => sum + (ticketValue(row) ?? 0), 0);
     const observedMarket = silverTickets + bycardTickets;
