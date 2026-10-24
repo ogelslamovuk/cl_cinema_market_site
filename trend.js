@@ -10,6 +10,12 @@
   let resizeFrame;
   const available = (day) => day?.status === "ready";
   const value = (amount) => typeof amount === "number" && Number.isFinite(amount) ? number.format(amount) : "—";
+  const share = (day) => available(day) && day.shareAllowed === true
+    && ["GREEN", "YELLOW"].includes(day.quality)
+    && Number.isFinite(day.market) && Number.isFinite(day.silver)
+    && day.market > 0 && day.silver >= 0 && day.silver <= day.market
+    ? `${(day.silver / day.market * 100).toFixed(1)}%` : "—";
+  const shareNote = (day) => share(day) === "—" ? "Доля не рассчитана" : day.quality === "YELLOW" ? "Оценка · неполное покрытие" : "от всего рынка";
   const dayStatus = (day) => !day || day.status === "unavailable" ? "Нет опубликованных данных" : day.status === "error" ? "Не удалось загрузить день" : day.quality === "YELLOW" ? "Неполное покрытие рынка" : day.quality === "RED" || day.quality === "UNKNOWN" ? "Качество данных требует внимания" : "Опубликованные данные";
 
   function selectDay(index, focus = false) {
@@ -21,13 +27,14 @@
     inspector.innerHTML = `
       <div class="trend-selected-date"><span>Выбранный день</span><strong>${date(day.day, true)}</strong><small class="trend-day-state ${available(day) && day.quality === "GREEN" ? "is-ready" : "is-partial"}">${dayStatus(day)}</small></div>
       <div class="trend-selected-market"><span><i aria-hidden="true"></i>Весь рынок</span><strong data-qa-atomic>${available(day) ? value(day.market) : "—"}</strong><small>билетов</small></div>
-      <div class="trend-selected-mooon"><span><i aria-hidden="true"></i>mooon</span><strong data-qa-atomic>${available(day) ? value(day.silver) : "—"}</strong><small>билетов</small></div>`;
+      <div class="trend-selected-mooon"><span><i aria-hidden="true"></i>mooon</span><strong data-qa-atomic>${available(day) ? value(day.silver) : "—"}</strong><small>билетов</small></div>
+      <div class="trend-selected-share"><span>Доля mooon</span><strong data-qa-atomic>${share(day)}</strong><small>${shareNote(day)}</small></div>`;
     root.querySelector(".trend-day-position").textContent = `${selected + 1} из ${model.days.length}`;
     root.querySelector(".trend-day-prev").disabled = selected === 0;
     root.querySelector(".trend-day-next").disabled = selected === model.days.length - 1;
     root.querySelectorAll(".trend-day-column").forEach((node, i) => node.classList.toggle("is-selected", i === selected));
     const plot = root.querySelector(".trend-plot");
-    plot.setAttribute("aria-label", `Проданные билеты. ${date(day.day, true)}. Весь рынок: ${available(day) ? value(day.market) : "нет данных"}. mooon: ${available(day) ? value(day.silver) : "нет данных"}. ${dayStatus(day)}. Стрелки влево и вправо — выбрать день.`);
+    plot.setAttribute("aria-label", `Проданные билеты. ${date(day.day, true)}. Весь рынок: ${available(day) ? value(day.market) : "нет данных"}. mooon: ${available(day) ? value(day.silver) : "нет данных"}. Доля mooon: ${share(day)}. ${shareNote(day)}. ${dayStatus(day)}. Стрелки влево и вправо — выбрать день.`);
     if (focus) plot.focus({ preventScroll: true });
   }
 
@@ -68,7 +75,7 @@
           ${day.market === 0 ? `<circle class="timeline-zero" cx="${center}" cy="${bottom}" r="3"/>` : ""}
           ${day.silver === 0 ? `<line class="timeline-zero-mooon" x1="${center - 3}" x2="${center + 3}" y1="${bottom}" y2="${bottom}"/>` : ""}`}
           ${showLabel ? `<text class="timeline-date" x="${center}" y="${height - 12}" text-anchor="middle">${new Date(`${day.day}T00:00:00`).getDate()}</text>` : ""}
-          <title>${date(day.day, true)}. Весь рынок: ${available(day) ? value(day.market) : "нет данных"}. mooon: ${available(day) ? value(day.silver) : "нет данных"}. ${dayStatus(day)}</title>
+          <title>${date(day.day, true)}. Весь рынок: ${available(day) ? value(day.market) : "нет данных"}. mooon: ${available(day) ? value(day.silver) : "нет данных"}. Доля mooon: ${share(day)}. ${shareNote(day)}. ${dayStatus(day)}</title>
         </g>`;
       }).join("")}
     </svg>`;
@@ -107,7 +114,7 @@
       <div class="trend-day-controls"><span>Выбери день на графике</span><div><button class="trend-day-prev" type="button" aria-label="Предыдущий день">←</button><span class="trend-day-position"></span><button class="trend-day-next" type="button" aria-label="Следующий день">→</button></div></div>
       ${gaps || partial || input.error ? `<div class="timeline-availability" role="status"><span>${gaps ? `Нет данных: ${gaps} из ${input.days.length} дней. Штриховка обозначает пропуск, а не ноль. ` : ""}${partial ? `Неполное покрытие или ограничение качества: ${partial} дн. ` : ""}${input.error ? escape(input.error) : ""}</span>${input.days.some(day => day.status === "error") && typeof input.onRetry === "function" ? '<button class="timeline-retry" type="button">Повторить загрузку</button>' : ""}</div>` : ""}
       <p class="timeline-scope">Период графика не зависит от периода отчёта. Учитывает область, город, кинотеатр и фильм.</p>
-      <details class="timeline-data"><summary>Все значения по дням</summary><div class="timeline-table-wrap"><table><thead><tr><th scope="col">Дата</th><th scope="col">Весь рынок</th><th scope="col">mooon</th><th scope="col">Данные</th></tr></thead><tbody>${input.days.map(day => `<tr><th scope="row">${date(day.day)}</th><td>${available(day) ? value(day.market) : "—"}</td><td>${available(day) ? value(day.silver) : "—"}</td><td>${dayStatus(day)}</td></tr>`).join("")}</tbody></table></div></details>`;
+      <details class="timeline-data"><summary>Все значения по дням</summary><div class="timeline-table-wrap"><table><thead><tr><th scope="col">Дата</th><th scope="col">Весь рынок</th><th scope="col">mooon</th><th scope="col">Доля mooon</th><th scope="col">Данные</th></tr></thead><tbody>${input.days.map(day => `<tr><th scope="row">${date(day.day)}</th><td>${available(day) ? value(day.market) : "—"}</td><td>${available(day) ? value(day.silver) : "—"}</td><td class="timeline-share">${share(day)}</td><td>${dayStatus(day)}</td></tr>`).join("")}</tbody></table></div></details>`;
     const plot = root.querySelector(".trend-plot");
     draw();
     selectDay(selected);
