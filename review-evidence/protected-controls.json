@@ -1,0 +1,66 @@
+[
+  {
+    "date": "2026-10-20",
+    "sha256": "59bc4167d687f36a0bfd1d4d047e1d9fb813e540f178ea8cb1cf795b0da89135",
+    "hash_valid": true,
+    "actual": [
+      119,
+      2001,
+      39717.95
+    ],
+    "expected": [
+      119,
+      2001,
+      39717.95
+    ],
+    "match": true
+  },
+  {
+    "date": "2026-10-21",
+    "sha256": "43f28d20a029235264bcaf76d778bb4ca79a9a957091784c7f4fce2ad3603a2b",
+    "hash_valid": true,
+    "actual": [
+      119,
+      2046,
+      40405.9
+    ],
+    "expected": [
+      119,
+      2046,
+      40405.9
+    ],
+    "match": true
+  },
+  {
+    "date": "2026-10-22",
+    "sha256": "7d686266969d5d3f05be7e19d80e773bbe125b2b2372f0a4cbedb15511eff140",
+    "hash_valid": true,
+    "actual": [
+      129,
+      1645,
+      33292.01
+    ],
+    "expected": [
+      129,
+      1645,
+      33292.01
+    ],
+    "match": true
+  },
+  {
+    "date": "2026-10-23",
+    "sha256": "73d2d29c5cd93d4530f234f84da44a644349cda1e987dc5ab3c0de2467d9d1f7",
+    "hash_valid": true,
+    "actual": [
+      130,
+      2962,
+      60853.91
+    ],
+    "expected": [
+      130,
+      2962,
+      60853.91
+    ],
+    "match": true
+  }
+]

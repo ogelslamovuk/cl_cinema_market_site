@@ -1,0 +1,200 @@
+{
+  "candidateSha": "5ecf147692e0cd2f1ebe02948b5ae94c9b850a43",
+  "status": "PASS",
+  "baselineSha256": "f0ef725898c3772a2e92046afa7b64c238b68fdbc299c622c360bf1adab7f1bf",
+  "scenarioCount": 44,
+  "failures": [],
+  "differences": [],
+  "performance": {
+    "baseline": {
+      "resources": [
+        {
+          "name": "/styles.css",
+          "bytes": 36556,
+          "duration": 72.89999999850988
+        },
+        {
+          "name": "/app.js",
+          "bytes": 63282,
+          "duration": 84.89999999850988
+        },
+        {
+          "name": "/tokens.css",
+          "bytes": 2595,
+          "duration": 43.20000000298023
+        },
+        {
+          "name": "/css2",
+          "bytes": 1114,
+          "duration": 552.2000000029802
+        },
+        {
+          "name": "/data/market-index.json",
+          "bytes": 146180,
+          "duration": 15
+        },
+        {
+          "name": "/data/days/2026-10-23.73d2d29c5cd93d45.json",
+          "bytes": 595125,
+          "duration": 18
+        },
+        {
+          "name": "/favicon.ico",
+          "bytes": 0,
+          "duration": 6.299999997019768
+        }
+      ],
+      "navigation": {
+        "name": "http://127.0.0.1:60044/dashboard/",
+        "entryType": "navigation",
+        "startTime": 0,
+        "duration": 3182.5,
+        "navigationId": 4632,
+        "initiatorType": "navigation",
+        "deliveryType": "",
+        "nextHopProtocol": "http/1.1",
+        "renderBlockingStatus": "non-blocking",
+        "contentType": "text/html",
+        "contentEncoding": "",
+        "workerStart": 0,
+        "workerRouterEvaluationStart": 0,
+        "workerCacheLookupStart": 0,
+        "workerMatchedSourceType": "",
+        "workerFinalSourceType": "",
+        "redirectStart": 0,
+        "redirectEnd": 0,
+        "fetchStart": 1.2000000029802322,
+        "domainLookupStart": 777.7000000029802,
+        "domainLookupEnd": 777.7000000029802,
+        "connectStart": 777.7000000029802,
+        "secureConnectionStart": 0,
+        "connectEnd": 778.3000000044703,
+        "requestStart": 778.3999999985099,
+        "responseStart": 821,
+        "firstInterimResponseStart": 0,
+        "finalResponseHeadersStart": 821,
+        "responseEnd": 821.6000000014901,
+        "transferSize": 15774,
+        "encodedBodySize": 15474,
+        "decodedBodySize": 15474,
+        "responseStatus": 200,
+        "serverTiming": [],
+        "unloadEventStart": 0,
+        "unloadEventEnd": 0,
+        "domInteractive": 1921.2000000029802,
+        "domContentLoadedEventStart": 1921.2000000029802,
+        "domContentLoadedEventEnd": 1921.3999999985099,
+        "domComplete": 3182.5,
+        "loadEventStart": 3182.5,
+        "loadEventEnd": 3182.5,
+        "type": "navigate",
+        "redirectCount": 0,
+        "activationStart": 0,
+        "criticalCHRestart": 0,
+        "notRestoredReasons": null,
+        "confidence": {
+          "randomizedTriggerRate": 0.4994798,
+          "value": "high"
+        }
+      },
+      "settledMs": 3625
+    },
+    "candidate": {
+      "resources": [
+        {
+          "name": "/assets/fonts/InterVariable.woff2",
+          "bytes": 352540,
+          "duration": 30.200000002980232
+        },
+        {
+          "name": "/styles.css",
+          "bytes": 26075,
+          "duration": 29.700000002980232
+        },
+        {
+          "name": "/app.js",
+          "bytes": 63282,
+          "duration": 31
+        },
+        {
+          "name": "/ui.js",
+          "bytes": 2264,
+          "duration": 30.30000000447035
+        },
+        {
+          "name": "/tokens.css",
+          "bytes": 1283,
+          "duration": 8.200000002980232
+        },
+        {
+          "name": "/data/market-index.json",
+          "bytes": 146180,
+          "duration": 8.199999995529652
+        },
+        {
+          "name": "/data/days/2026-10-23.73d2d29c5cd93d45.json",
+          "bytes": 595125,
+          "duration": 11.799999997019768
+        }
+      ],
+      "navigation": {
+        "name": "http://127.0.0.1:61930/dashboard/",
+        "entryType": "navigation",
+        "startTime": 0,
+        "duration": 345.79999999701977,
+        "navigationId": 4178,
+        "initiatorType": "navigation",
+        "deliveryType": "",
+        "nextHopProtocol": "http/1.1",
+        "renderBlockingStatus": "non-blocking",
+        "contentType": "text/html",
+        "contentEncoding": "",
+        "workerStart": 0,
+        "workerRouterEvaluationStart": 0,
+        "workerCacheLookupStart": 0,
+        "workerMatchedSourceType": "",
+        "workerFinalSourceType": "",
+        "redirectStart": 0,
+        "redirectEnd": 0,
+        "fetchStart": 0.7999999970197678,
+        "domainLookupStart": 0.7999999970197678,
+        "domainLookupEnd": 0.7999999970197678,
+        "connectStart": 0.7999999970197678,
+        "secureConnectionStart": 0,
+        "connectEnd": 0.7999999970197678,
+        "requestStart": 11.5,
+        "responseStart": 12.700000002980232,
+        "firstInterimResponseStart": 0,
+        "finalResponseHeadersStart": 12.700000002980232,
+        "responseEnd": 13.5,
+        "transferSize": 16896,
+        "encodedBodySize": 16596,
+        "decodedBodySize": 16596,
+        "responseStatus": 200,
+        "serverTiming": [],
+        "unloadEventStart": 0,
+        "unloadEventEnd": 0,
+        "domInteractive": 110.70000000298023,
+        "domContentLoadedEventStart": 110.70000000298023,
+        "domContentLoadedEventEnd": 110.79999999701977,
+        "domComplete": 345.70000000298023,
+        "loadEventStart": 345.79999999701977,
+        "loadEventEnd": 345.79999999701977,
+        "type": "navigate",
+        "redirectCount": 0,
+        "activationStart": 0,
+        "criticalCHRestart": 0,
+        "notRestoredReasons": null,
+        "confidence": {
+          "randomizedTriggerRate": 0.4994798,
+          "value": "low"
+        }
+      },
+      "settledMs": 777
+    }
+  },
+  "note": "Functional parity only. Visual acceptance independently required. dirty state prevents exact final SHA acceptance. Rendered numerical strings compared exactly; internal unrounded arrays allow <1e-7 floating addition order noise from four asynchronous immutable-day workers.",
+  "internal_float_noise_count": 54,
+  "max_internal_float_noise": 1.862645149230957e-09,
+  "displayed_value_differences": 0
+}

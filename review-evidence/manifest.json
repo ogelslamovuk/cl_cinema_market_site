@@ -1,0 +1,203 @@
+{
+  "ui_commit": "4d4ce541a1281c1bc7853d34d6f30716950e3b44",
+  "baseline_commit": "c80e3cf8a1052e3346d30437d8fe80f289cce490",
+  "canonical_git_blob_sha256": {
+    "dashboard/index.html": "e35d167db708492db4e00eea1309cb42cec94d351d61c31c765041ab52f57f1a",
+    "index.html": "eb963baf80aad069b0c6213a0165529fa12047a5d45c1a1dc7d949acfc17c3bc",
+    "styles.css": "bc58abacfd5be560e0aa71836eaf5b0076a370ce0a49ea887c61068e34986175",
+    "tokens.css": "2a022615f671a06a8d0c2808ce74b94e210bbd2c252306530105f213a813c44a",
+    "ui.js": "5cc42ab5d7751b4c60746f785e1265f8c48b5fedf6534dae094dcb36ccb3a830",
+    "assets/fonts/InterVariable.woff2": "693b77d4f32ee9b8bfc995589b5fad5e99adf2832738661f5402f9978429a8e3"
+  },
+  "captures": [
+    {
+      "file": "images/before-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 623949,
+      "sha256": "78754cf419b06ddd5fefe2d4bcae1ece7af2baca3146c0ad0b7ca4962d4329a2"
+    },
+    {
+      "file": "images/before-mobile.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 228532,
+      "sha256": "fbc2a5c9523af566f929950954794e880b17f6b40496654e3f36e56581c840e9"
+    },
+    {
+      "file": "images/last7-chart-320.png",
+      "width": 320,
+      "height": 700,
+      "bytes": 33473,
+      "sha256": "b5e1ca7613479e88bd7b193a80725360a2a85637562fac56275302eb4a6b14a3"
+    },
+    {
+      "file": "images/nav-competitors-1440.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 94158,
+      "sha256": "3147eb0c8ec0310cc10d8fd5e2e29124b9f44a5a1fb62757c7553f87ed0a6539"
+    },
+    {
+      "file": "images/nav-films-390.png",
+      "width": 390,
+      "height": 900,
+      "bytes": 51226,
+      "sha256": "59eead2746364361cddda43422db74e5be2ebb9c9d6f7892ff1d97936a340513"
+    },
+    {
+      "file": "images/nav-geography-390.png",
+      "width": 390,
+      "height": 900,
+      "bytes": 38675,
+      "sha256": "fa84a01f8d9121bdc24d37a9ed9c8e96955619d50c637a25b1fa44caaa846374"
+    },
+    {
+      "file": "images/nav-quality-section-1440.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 81046,
+      "sha256": "a029cc2e3452cefd365556967419ac08efb7bd2a083f65f7de4f5d42c48629dd"
+    },
+    {
+      "file": "images/overview-1280-viewport.png",
+      "width": 1280,
+      "height": 800,
+      "bytes": 113607,
+      "sha256": "d0d8ea531601f447bdbb2f8e7c5ab307a678a66538828d646fec08bdc9e56297"
+    },
+    {
+      "file": "images/overview-1440-viewport.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 130431,
+      "sha256": "c6dd673c6ac85e13146c5042c8692444ba13c0f1b7e80212948d12ec8dc54b2a"
+    },
+    {
+      "file": "images/overview-1920-viewport.png",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 156698,
+      "sha256": "60e0faf26d4fb0bb2c923da63d00114f4fa81124c64508d4d37cf07c66a89363"
+    },
+    {
+      "file": "images/overview-320-viewport.png",
+      "width": 320,
+      "height": 844,
+      "bytes": 59793,
+      "sha256": "23d86f6be04ad7ccc444764a2bf220345f482d8d192310cd5aa72cc10810d1e9"
+    },
+    {
+      "file": "images/overview-390-viewport.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 62841,
+      "sha256": "fec7e87580f03f2ca7ae944502713a1ee971467eed7e3ad33cfe887bc720a21c"
+    },
+    {
+      "file": "images/overview-768-viewport.png",
+      "width": 768,
+      "height": 1024,
+      "bytes": 106271,
+      "sha256": "aee4cde8a3ea38c8e69c0ea57ea7c6a2bfc1b382363bc6d539b1140763660420"
+    },
+    {
+      "file": "images/period-320x700.png",
+      "width": 320,
+      "height": 700,
+      "bytes": 38560,
+      "sha256": "0c7dba2b434d548d6ea4a05403b4fc2abf430456da91c4355656ebcf2f21ac02"
+    },
+    {
+      "file": "images/period-390-viewport.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 46792,
+      "sha256": "9169f4971aa8d26e8907901b6d5f2006243d2f76a702819bc737b7a9300ddb4b"
+    },
+    {
+      "file": "images/period-844x390.png",
+      "width": 844,
+      "height": 390,
+      "bytes": 39336,
+      "sha256": "7af21a49a54e9890fef15ad1716e0fabcb09d753c44b7f565bb1ec47a73ffad3"
+    },
+    {
+      "file": "images/selected-region-film-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 56882,
+      "sha256": "591f6363aa626040cbe43556b8ae7b4751ee5f53e3a0259f315bd1e389a71850"
+    },
+    {
+      "file": "images/state-404-viewport.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 46700,
+      "sha256": "203335934b316cec433e637f7af5341ede1c460a247db2af4b5da31484dfcf5f"
+    },
+    {
+      "file": "images/state-empty-viewport.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 52599,
+      "sha256": "735a8f47db7e315d027c728d2cea8cad112df61a5ac96d250dc7e2c9beaeddda"
+    },
+    {
+      "file": "images/state-loading-viewport.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 45102,
+      "sha256": "b5aeb824977ae8da1ec35701532b6259128258edbce607f792486a9c95389544"
+    },
+    {
+      "file": "images/state-RED-viewport.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 56169,
+      "sha256": "50cbb65ce8a9643020bb2f7bf0abdbfeb7aed225a003ee7644b295138bc6ff9a"
+    },
+    {
+      "file": "images/state-UNKNOWN-viewport.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 56686,
+      "sha256": "f32bc5def3a12d4c6179418423281d92cb795e7983676f8b38687db1388d472f"
+    },
+    {
+      "file": "images/state-YELLOW-viewport.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 63227,
+      "sha256": "0557aad0b801a6664f5f64b4b454ed92ce17f194d16e988729e1aac933d25fa2"
+    },
+    {
+      "file": "images/state-zero-viewport.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 52169,
+      "sha256": "2e50948735e48fb9fcf617269b4cd8c983be37d7c5e463393096aa395c88a12b"
+    },
+    {
+      "file": "images/table-scroll-320.png",
+      "width": 320,
+      "height": 700,
+      "bytes": 39867,
+      "sha256": "23171eaac7fcd9be531413a3308b5ae19ccc8dc58dcb6ebdb1fd3acd1e1ffd36"
+    },
+    {
+      "file": "images/tooltip-320.png",
+      "width": 320,
+      "height": 700,
+      "bytes": 46203,
+      "sha256": "fc91c3ec3e0063718d384d5e790e17cac743c311b387f172f2469c929314358c"
+    },
+    {
+      "file": "images/zoom200-overview.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 90522,
+      "sha256": "19cdca00f0b36b91249de2c4e46a585c8e7b06dc0d79f6d3ad18f3c134318f49"
+    }
+  ]
+}
