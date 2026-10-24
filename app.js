@@ -963,7 +963,7 @@ function render() {
       <span>Фильм</span><span class="number">Билеты<small>рынок · билеты</small></span><span class="number">Билеты<small>mooon · билеты</small></span><span class="number">Билеты<small>конкуренты · билеты</small></span><span class="number">Касса<small>рынок · BYN</small></span><span class="number">Касса<small>mooon · BYN</small></span><span class="number">Доля<small>mooon</small></span><span class="number">Доля фильма<small>в рынке</small></span><span>Прокат</span>
     </div>` + films.slice(0, 20).map((film) => `
     <div class="table-row">
-      <span class="film-name">${esc(film.name)}</span>
+      <span class="film-name film-identity" data-poster-scope="${film.releaseScope}"><span class="film-poster" aria-hidden="true"></span><span class="film-title">${esc(film.name)}</span></span>
       <span class="number">${nf.format(film.marketTickets)}</span>
       <span class="number">${nf.format(film.silverTickets)}</span>
       <span class="number">${nf.format(film.otherTickets)}</span>
@@ -973,6 +973,8 @@ function render() {
       <span class="number">${!sharesAllowed || film.marketSharePct === null ? "—" : `${film.marketSharePct.toFixed(1)}%`}</span>
       <span class="release-state ${film.releaseScope}">${releaseLabels[film.releaseScope]}</span>
     </div>`).join("");
+
+  globalThis.MarketPosters?.render(films.slice(0, 20), silverRows);
 
   renderBars("cities-chart", grouped(marketRows, "city"));
   renderBars("regions-chart", grouped(marketRows, "region"));
