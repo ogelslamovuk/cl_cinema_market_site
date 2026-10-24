@@ -653,6 +653,27 @@ function renderDailyTrend(bycardRows, silverRows) {
     return;
   }
 
+  if (days.length === 1) {
+    const day = days[0];
+    const scale = Math.max(day.market, 1);
+    const date = new Date(`${day.day}T00:00:00`).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+    $("daily-trend").innerHTML = `
+      <div class="trend-single" aria-label="Проданные билеты за ${date}">
+        <div class="trend-single-heading"><time datetime="${esc(day.day)}">${date}</time><span>Продано билетов</span></div>
+        <div class="trend-comparison-row">
+          <div class="trend-comparison-label"><span><i aria-hidden="true"></i>Весь рынок</span><strong data-qa-atomic>${nf.format(day.market)}</strong></div>
+          <div class="trend-comparison-track" aria-hidden="true"><span style="width:${day.market / scale * 100}%"></span></div>
+        </div>
+        <div class="trend-comparison-row trend-comparison-mooon">
+          <div class="trend-comparison-label"><span><i aria-hidden="true"></i>mooon</span><strong data-qa-atomic>${nf.format(day.silver)}</strong></div>
+          <div class="trend-comparison-track" aria-hidden="true"><span style="width:${day.silver / scale * 100}%"></span></div>
+        </div>
+        <p class="trend-comparison-note">mooon входит в общий рынок. Длина полос — в едином масштабе от нуля.</p>
+        <p class="trend-single-help">Чтобы увидеть динамику, выбери 7 дней или прокатную неделю в фильтре периода.</p>
+      </div>`;
+    return;
+  }
+
   const width = 900;
   const height = 330;
   const inset = { top: 24, right: 28, bottom: 42, left: 18 };
@@ -675,6 +696,11 @@ function renderDailyTrend(bycardRows, silverRows) {
   const latestShare = latest.market && ["GREEN", "YELLOW"].includes(selectedMarketQuality().status)
     ? `${(latest.silver / latest.market * 100).toFixed(1)}%` : "не рассчитана";
   $("daily-trend").innerHTML = `
+    <div class="trend-latest">
+      <span class="trend-latest-date">Последний день · ${formatDay(latest.day)}</span>
+      <div><span>Весь рынок</span><strong data-qa-atomic>${nf.format(latest.market)}</strong></div>
+      <div class="trend-latest-mooon"><span>mooon</span><strong data-qa-atomic>${nf.format(latest.silver)}</strong></div>
+    </div>
     <svg class="trend-svg" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="trend-title trend-desc">
       <title id="trend-title">Динамика проданных билетов</title>
       <desc id="trend-desc">Период ${formatDay(days[0].day)} — ${formatDay(latest.day)}. Последний день: рынок ${nf.format(latest.market)}, mooon ${nf.format(latest.silver)}, доля ${latestShare}.</desc>
@@ -687,8 +713,6 @@ function renderDailyTrend(bycardRows, silverRows) {
       ${marketPoints.map((item) => `<circle class="trend-point-market" cx="${item.x}" cy="${item.y}" r="3"></circle>`).join("")}
       ${silverPoints.map((item) => `<circle class="trend-point-silver" cx="${item.x}" cy="${item.y}" r="4"></circle>`).join("")}
       ${labelIndexes.map((index) => `<text class="trend-axis-label" x="${marketPoints[index].x}" y="${height - 12}" text-anchor="${index === 0 ? "start" : index === days.length - 1 ? "end" : "middle"}">${formatDay(days[index].day)}</text>`).join("")}
-      <text class="trend-end-label" x="${Math.max(inset.left, marketPoints.at(-1).x - 6)}" y="${Math.max(16, marketPoints.at(-1).y - 11)}" text-anchor="end">${nf.format(latest.market)}</text>
-      <text class="trend-end-label" x="${Math.max(inset.left, silverPoints.at(-1).x - 6)}" y="${Math.max(16, silverPoints.at(-1).y - 11)}" text-anchor="end">mooon ${nf.format(latest.silver)}</text>
     </svg>`;
 }
 
