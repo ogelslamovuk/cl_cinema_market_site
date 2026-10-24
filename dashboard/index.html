@@ -21,7 +21,7 @@
       })();
     </script>
     <link rel="preload" href="../assets/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="../styles.css?v=hnd0003-v04">
+    <link rel="stylesheet" href="../styles.css?v=hnd0003-v06">
   </head>
   <body class="dashboard-page" data-index-url="../data/market-index.json" data-data-url="../data/market.json">
     <header class="app-chrome">
@@ -102,48 +102,56 @@
           </div>
 
           <div class="instrument-grid">
-            <article class="market-card instrument instrument-primary">
-              <div class="orbit" id="share-orbit" role="meter" aria-label="Доля билетов mooon" aria-valuemin="0" aria-valuemax="100">
-                <div class="orbit-value"><span>Доля билетов mooon</span><strong id="share" data-qa-atomic="percentage">—</strong><small>mooon</small></div>
-                <div class="share-line"><i id="share-track" aria-hidden="true"></i></div>
+            <article class="market-card instrument instrument-primary share-panel">
+              <header class="share-panel-heading"><h3 id="ticket-share-title">Доля билетов mooon</h3></header>
+              <div class="orbit share-composition" id="share-orbit" role="meter" aria-labelledby="ticket-share-title" aria-describedby="share-note" aria-valuemin="0" aria-valuemax="100" data-dial-state="unavailable">
+                <div class="share-disc" aria-hidden="true"><span class="share-disc-hub"></span></div>
+                <div class="share-reading"><strong id="share" data-qa-atomic="percentage">—</strong></div>
+                <i class="computed-share-hook" id="share-track" aria-hidden="true"></i>
               </div>
+              <div class="share-key" aria-hidden="true"><span><i></i>mooon</span><span><i></i>Другие</span></div>
               <p id="share-note">Ожидается согласованная выгрузка mooon</p>
             </article>
 
-            <article class="market-card instrument instrument-secondary">
-              <div class="orbit" id="revenue-orbit" role="meter" aria-label="Доля кассы mooon" aria-valuemin="0" aria-valuemax="100">
-                <div class="orbit-value"><span>Доля кассы mooon · оценка</span><strong id="revenue-share" data-qa-atomic="percentage">—</strong><small>mooon</small></div>
-                <div class="share-line"><i id="revenue-share-track" aria-hidden="true"></i></div>
+            <article class="market-card instrument instrument-secondary share-panel">
+              <header class="share-panel-heading"><h3 id="cash-share-title">Доля кассы mooon · оценка</h3></header>
+              <div class="orbit share-composition" id="revenue-orbit" role="meter" aria-labelledby="cash-share-title" aria-describedby="revenue-share-note" aria-valuemin="0" aria-valuemax="100" data-dial-state="unavailable">
+                <div class="share-disc" aria-hidden="true"><span class="share-disc-hub"></span></div>
+                <div class="share-reading"><strong id="revenue-share" data-qa-atomic="percentage">—</strong></div>
+                <i class="computed-share-hook" id="revenue-share-track" aria-hidden="true"></i>
               </div>
+              <div class="share-key" aria-hidden="true"><span><i></i>mooon</span><span><i></i>Другие</span></div>
               <p id="revenue-share-note">Ожидается согласованная выгрузка mooon</p>
             </article>
-
+          </div>
+          <div class="sales-ledger">
             <article class="own-metric">
               <span>Билеты mooon</span>
               <strong data-mirror="ss-import-tickets" data-qa-atomic="amount">—</strong>
-              <small>Продажи с учётом возвратов</small>
-              <a href="#quality-section">Данные mooon <span aria-hidden="true">↗</span></a>
+              <small>Учтены возвраты</small>
             </article>
             <article class="own-metric money">
               <span>Касса mooon</span>
               <strong data-mirror="ss-import-revenue" data-qa-atomic="amount">—</strong>
-              <small>С учётом возвратов · BYN</small>
-              <a href="#quality-section">Источники и полнота <span aria-hidden="true">↗</span></a>
+              <small>Учтены возвраты</small>
             </article>
           </div>
             <article class="market-volume">
               <header><span>Объём рынка</span><small>Текущий срез</small></header>
               <div class="volume-metric">
-                <span>Продано билетов</span><strong id="tickets" data-qa-atomic="amount">—</strong><small id="tickets-note"></small>
+                <span>Билеты рынка</span><strong id="tickets" data-qa-atomic="amount">—</strong>
               </div>
               <div class="volume-metric">
-                <span>Касса по номиналу · включая оценку</span><strong id="revenue" data-qa-atomic="amount">—</strong><small id="revenue-note"></small>
+                <span>Касса рынка · оценка</span><strong id="revenue" data-qa-atomic="amount">—</strong>
               </div>
             </article>
+          <div class="sales-ledger-footer"><a href="#quality-section">Данные mooon <span aria-hidden="true">↗</span></a><a href="#quality-section">Источники и полнота <span aria-hidden="true">↗</span></a></div>
+          <details class="sales-breakdown"><summary>Состав рынка и полнота данных</summary><div class="sales-breakdown-content"><p><b>Билеты:</b> <span id="tickets-note"></span></p><p><b>Касса:</b> <span id="revenue-note"></span></p>
           <aside class="data-disclaimer" aria-label="Полнота данных">
             <span aria-hidden="true">i</span>
             <p><strong id="coverage">—</strong> <span id="coverage-note"></span></p>
           </aside>
+          </div></details>
         </section>
       </section>
 
@@ -217,7 +225,8 @@
 
       <footer><strong>Доля рынка, динамика и качество данных — в одном срезе.</strong><span>Cinemalab Market Intelligence · mooon · ByCard · Korona · Skyline</span></footer>
     </main>
-    <script src="../app.js?v=market-quality-v07"></script>
-    <script src="../ui.js?v=hnd0003-v04"></script>
+    <script src="../posters.js?v=hnd0003-v06"></script>
+    <script src="../app.js?v=hnd0003-v06"></script>
+    <script src="../ui.js?v=hnd0003-v06"></script>
   </body>
 </html>
