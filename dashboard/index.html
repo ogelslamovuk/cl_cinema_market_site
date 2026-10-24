@@ -7,7 +7,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta name="robots" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
-    <meta name="theme-color" content="#0d1019">
+    <meta name="theme-color" content="#f5f7fa">
     <title>Кинорынок Беларуси — Cinemalab</title>
     <script>
       (() => {
@@ -20,7 +20,8 @@
         }
       })();
     </script>
-    <link rel="stylesheet" href="../styles.css?v=market-quality-v07">
+    <link rel="preload" href="../assets/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="../styles.css?v=hnd0003-v04">
   </head>
   <body class="dashboard-page" data-index-url="../data/market-index.json" data-data-url="../data/market.json">
     <header class="app-chrome">
@@ -41,6 +42,17 @@
         </div>
       </nav>
 
+    </header>
+
+    <main class="shell">
+      <section class="hero" id="overview">
+        <header class="hero-copy">
+          <p class="context-line">Беларусь · аналитика кинопроката</p>
+          <h1>Кинорынок Беларуси</h1>
+          <p id="subtitle">Объём рынка, доля mooon, конкуренты и динамика.</p>
+        </header>
+      </section>
+      <div class="report-controls">
       <section class="filters" aria-label="Фильтры отчёта">
         <div class="period-filter">
           <span class="filter-caption">Период</span>
@@ -64,14 +76,15 @@
             <div class="period-pane" id="period-weeks"></div>
           </div>
         </div>
+        <button class="filter-toggle" id="filter-toggle" type="button" aria-expanded="false" aria-controls="geography-filters">Фильтры <span id="filter-count"></span><span aria-hidden="true">⌄</span></button>
+        <div class="geography-filters" id="geography-filters">
         <label>Область<select id="region"><option value="">Все области</option></select></label>
         <label>Город<select id="city"><option value="">Все города</option></select></label>
         <label>Кинотеатр<select id="cinema"><option value="">Все кинотеатры</option></select></label>
         <label>Фильм<select id="film"><option value="">Все фильмы</option></select></label>
+        </div>
       </section>
-    </header>
-
-    <main class="shell">
+      </div>
       <div class="data-load-state" id="data-load-state" role="status" aria-live="polite" aria-atomic="true" tabindex="-1" hidden></div>
       <div class="market-quality-state" id="market-quality-state" role="status" aria-live="polite" hidden></div>
       <section class="unavailable-day" id="unavailable-day" hidden aria-live="polite">
@@ -81,56 +94,52 @@
         <small>Показатели рынка и доля mooon не рассчитываются по неполной выборке.</small>
       </section>
 
-      <section class="hero" id="overview">
-        <header class="hero-copy">
-          <p class="context-line">Беларусь · прокатная неделя четверг—среда</p>
-          <h1>Кинорынок<br><em>Беларуси</em></h1>
-          <p id="subtitle">Объём рынка, доля mooon, конкуренты и динамика.</p>
-        </header>
-
+      <section class="executive-overview" aria-label="Позиция mooon и объём рынка">
         <section class="decision-stage" aria-label="Рыночная позиция mooon">
           <div class="decision-heading">
-            <div><span class="section-index">01</span><h2>Доля рынка</h2></div>
+            <div><span class="section-index">01</span><h2>Позиция mooon</h2></div>
             <p>Наблюдаемый рынок · выбранный период и география</p>
           </div>
 
           <div class="instrument-grid">
             <article class="market-card instrument instrument-primary">
-              <div class="orbit" id="share-orbit" role="meter" aria-label="Admissions share mooon" aria-valuemin="0" aria-valuemax="100">
-                <svg viewBox="0 0 240 240" aria-hidden="true">
-                  <circle class="orbit-guide" cx="120" cy="120" r="96" pathLength="100"></circle>
-                  <circle class="orbit-tick" cx="120" cy="120" r="108" pathLength="100"></circle>
-                  <circle class="orbit-progress" cx="120" cy="120" r="96" pathLength="100"></circle>
-                </svg>
-                <div class="orbit-value"><span>Admissions</span><strong id="share">—</strong><small>mooon</small></div>
-                <i id="share-track" aria-hidden="true"></i>
+              <div class="orbit" id="share-orbit" role="meter" aria-label="Доля билетов mooon" aria-valuemin="0" aria-valuemax="100">
+                <div class="orbit-value"><span>Доля билетов mooon</span><strong id="share" data-qa-atomic="percentage">—</strong><small>mooon</small></div>
+                <div class="share-line"><i id="share-track" aria-hidden="true"></i></div>
               </div>
               <p id="share-note">Ожидается согласованная выгрузка mooon</p>
             </article>
 
             <article class="market-card instrument instrument-secondary">
-              <div class="orbit" id="revenue-orbit" role="meter" aria-label="Revenue share mooon" aria-valuemin="0" aria-valuemax="100">
-                <svg viewBox="0 0 240 240" aria-hidden="true">
-                  <circle class="orbit-guide" cx="120" cy="120" r="96" pathLength="100"></circle>
-                  <circle class="orbit-tick" cx="120" cy="120" r="108" pathLength="100"></circle>
-                  <circle class="orbit-progress" cx="120" cy="120" r="96" pathLength="100"></circle>
-                </svg>
-                <div class="orbit-value"><span>Revenue</span><strong id="revenue-share">—</strong><small>mooon</small></div>
-                <i id="revenue-share-track" aria-hidden="true"></i>
+              <div class="orbit" id="revenue-orbit" role="meter" aria-label="Доля кассы mooon" aria-valuemin="0" aria-valuemax="100">
+                <div class="orbit-value"><span>Доля кассы mooon · оценка</span><strong id="revenue-share" data-qa-atomic="percentage">—</strong><small>mooon</small></div>
+                <div class="share-line"><i id="revenue-share-track" aria-hidden="true"></i></div>
               </div>
               <p id="revenue-share-note">Ожидается согласованная выгрузка mooon</p>
             </article>
 
+            <article class="own-metric">
+              <span>Билеты mooon · net</span>
+              <strong data-mirror="ss-import-tickets" data-qa-atomic="amount">—</strong>
+              <small>Продажи с учётом возвратов</small>
+              <a href="#quality-section">Данные mooon <span aria-hidden="true">↗</span></a>
+            </article>
+            <article class="own-metric money">
+              <span>Касса mooon · net</span>
+              <strong data-mirror="ss-import-revenue" data-qa-atomic="amount">—</strong>
+              <small>По данным mooon · BYN</small>
+              <a href="#quality-section">Источники и полнота <span aria-hidden="true">↗</span></a>
+            </article>
+          </div>
             <article class="market-volume">
               <header><span>Объём рынка</span><small>Текущий срез</small></header>
               <div class="volume-metric">
-                <span>Продано билетов</span><strong id="tickets">—</strong><small id="tickets-note"></small>
+                <span>Продано билетов</span><strong id="tickets" data-qa-atomic="amount">—</strong><small id="tickets-note"></small>
               </div>
               <div class="volume-metric">
-                <span>Касса по номиналу</span><strong id="revenue">—</strong><small id="revenue-note"></small>
+                <span>Касса по номиналу · включая оценку</span><strong id="revenue" data-qa-atomic="amount">—</strong><small id="revenue-note"></small>
               </div>
             </article>
-          </div>
           <aside class="data-disclaimer" aria-label="Полнота данных">
             <span aria-hidden="true">i</span>
             <p><strong id="coverage">—</strong> <span id="coverage-note"></span></p>
@@ -169,7 +178,7 @@
         <header class="block-heading"><div><span class="section-index">04</span><h2>Контент и площадки</h2></div><p>Фильмы, кинотеатры и время спроса</p></header>
         <article class="panel film-panel">
           <header class="panel-heading"><div><h3>Фильмы рынка</h3><p>mooon, остальные площадки и доля фильма</p></div><span id="film-count"></span></header>
-          <div id="films-table" class="table film-table"></div>
+          <div id="films-table" class="table film-table" tabindex="0" role="region" aria-label="Таблица фильмов — прокрутка по горизонтали" data-ui-scroll="horizontal" data-ui-scroll-reason="Сравнение всех исходных показателей фильма"></div>
         </article>
         <div class="split-panels">
           <article class="panel"><header class="panel-heading"><div><h3>Кинотеатры</h3><p>Площадки по объёму продаж</p></div></header><div id="cinemas-chart" class="bars"></div></article>
@@ -207,5 +216,6 @@
       <footer><strong>Доля рынка, динамика и качество данных — в одном срезе.</strong><span>Cinemalab Market Intelligence · mooon · ByCard · Korona · Skyline</span></footer>
     </main>
     <script src="../app.js?v=market-quality-v07"></script>
+    <script src="../ui.js?v=hnd0003-v04"></script>
   </body>
 </html>
