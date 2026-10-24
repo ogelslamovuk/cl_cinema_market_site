@@ -74,4 +74,16 @@ html{scroll-padding-top:120px}.nav-pill,.shell{width:calc(100% - 32px)}.brand{fo
  .orbit-value>span,.own-metric>span,.own-metric>small,.own-metric>a,.competitor-card dt{font-size:11px}
  .trend-svg:not(:has(.trend-market-line)) .trend-axis-label,.trend-svg:not(:has(.trend-market-line)) .trend-end-label{font-size:36px}
 }
+/* Mobile helper copy has a 12px floor; SVG type compensates for its screen transform. */
+.trend-axis-label,.trend-end-label{font-size:14px}
+.trend-svg:not(:has(.trend-market-line)) .trend-axis-label,.trend-svg:not(:has(.trend-market-line)) .trend-end-label{font-size:26px}
+@media(max-width:1100px){.trend-axis-label,.trend-end-label{font-size:20px}}
+@media(max-width:600px){
+ .dashboard-page small,.brand small,.status,.context-line,.hero-copy>p:last-child,.filters label,.period-filter,.filter-caption,.filter-toggle,.period-day small,.period-day b,.period-month h3,.period-week,.period-empty,.market-quality-state,.data-load-state,.orbit-value>span,.own-metric>span,.own-metric>small,.own-metric>a,.instrument>p,.volume-metric>span,.volume-metric small,.data-disclaimer,.signal-strip span,.signal-strip small,.block-heading p,.decision-heading p,.panel-heading p,.panel-heading>span,.chart-legend,.bar-label,.competitor-card header>small,.competitor-card dt,.competitor-card dd,.source-card header strong,.source-card header span,.source-card dt,.source-card dd,.source-primary>span,.quality-row,.quality-tooltip,.release-state,footer{font-size:12px}
+ .nav-links{gap:18px}.nav-links a,.table-row.header{font-size:12px}.table-row.header small{white-space:normal}
+ .market-volume header small,.table-row.header small,.competitor-card>b{font-size:12px}
+ .table-row{grid-template-columns:160px repeat(7,96px) 140px;min-width:1100px}
+ .trend-axis-label,.trend-end-label,.trend-svg:not(:has(.trend-market-line)) .trend-axis-label,.trend-svg:not(:has(.trend-market-line)) .trend-end-label{font-size:34px}
+}
+@media(max-width:350px){.nav-links{gap:0}.hero{padding-top:18px}.hero-copy{margin-bottom:12px}.decision-heading{margin-top:14px}.table-row{grid-template-columns:140px repeat(7,96px) 140px;min-width:1072px;padding-inline:12px}.trend-axis-label,.trend-end-label,.trend-svg:not(:has(.trend-market-line)) .trend-axis-label,.trend-svg:not(:has(.trend-market-line)) .trend-end-label{font-size:42px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
