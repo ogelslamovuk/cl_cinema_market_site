@@ -1,0 +1,232 @@
+{
+  "ui_commit": "d5aa7d5d289d31fbb9c2ec39cd0c6c5d957ed79d",
+  "reviewed_before_commit": "934174f6c4eab83147e837273b7bd6ec171f32c2",
+  "canonical_git_blob_sha256": {
+    "app.js": "994a55076783d57811fc09242a7bd4a60da649df6a3880e40cfbac3854c79082",
+    "dashboard/index.html": "6a096cc500bfb7c046695db0ffd68e96236811aef69b3c214f58687061beae26",
+    "index.html": "eb963baf80aad069b0c6213a0165529fa12047a5d45c1a1dc7d949acfc17c3bc",
+    "styles.css": "fa3e8836193c428917b51e908a30df90c38765ef83290d21c73f43400fc10e8c",
+    "tokens.css": "2a022615f671a06a8d0c2808ce74b94e210bbd2c252306530105f213a813c44a",
+    "ui.js": "5cc42ab5d7751b4c60746f785e1265f8c48b5fedf6534dae094dcb36ccb3a830",
+    "assets/fonts/InterVariable.woff2": "693b77d4f32ee9b8bfc995589b5fad5e99adf2832738661f5402f9978429a8e3"
+  },
+  "captures": [
+    {
+      "file": "images/before-nav-320.png",
+      "width": 320,
+      "height": 844,
+      "bytes": 59793,
+      "sha256": "23d86f6be04ad7ccc444764a2bf220345f482d8d192310cd5aa72cc10810d1e9"
+    },
+    {
+      "file": "images/before-table-390.png",
+      "width": 390,
+      "height": 900,
+      "bytes": 51226,
+      "sha256": "59eead2746364361cddda43422db74e5be2ebb9c9d6f7892ff1d97936a340513"
+    },
+    {
+      "file": "images/before-day-chart-390.png",
+      "width": 390,
+      "height": 900,
+      "bytes": 38675,
+      "sha256": "fa84a01f8d9121bdc24d37a9ed9c8e96955619d50c637a25b1fa44caaa846374"
+    },
+    {
+      "file": "images/competitors-1440.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 94968,
+      "sha256": "d6c10f83c8018fa9a1161d30fe03b398eadab9c7b8beab8ffa15b2e01e4cf46e"
+    },
+    {
+      "file": "images/day-chart-1440.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 66309,
+      "sha256": "103be9cbace78d52e9ef6ca3dfa9557a0a53e5de8bde0b2f2eea9d991a3ac127"
+    },
+    {
+      "file": "images/day-chart-320.png",
+      "width": 320,
+      "height": 844,
+      "bytes": 42741,
+      "sha256": "9b3a5978e585c8fd7b837ac0a16dbbf260437f38980c9529379ed09b244887c9"
+    },
+    {
+      "file": "images/day-chart-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 46922,
+      "sha256": "3f438afd661c00a38f8d3656139d603d5f10b7cc5023b7e9326c4bf1e4f6ebbe"
+    },
+    {
+      "file": "images/filters-selected-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 60897,
+      "sha256": "61f1c8f23d7a0323fc92b3aa34c9b6044a714fed3954d4946c5ef956585298ec"
+    },
+    {
+      "file": "images/last7-chart-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 47553,
+      "sha256": "32240963c5c7b54dc2c3de6d54c121211e875be4241828d33a23bc9576614ca0"
+    },
+    {
+      "file": "images/overview-1440.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 128600,
+      "sha256": "f7268e4fbb5d4a2805908eab38dd406f2e301f92bb542ac4b489fc0d4f8fef03"
+    },
+    {
+      "file": "images/overview-320.png",
+      "width": 320,
+      "height": 844,
+      "bytes": 63698,
+      "sha256": "605757d89028f98cd315b9f0c4782cdece801dbb260d13845a9efb73984e2b22"
+    },
+    {
+      "file": "images/overview-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 68272,
+      "sha256": "93629cf5fdf316ca399b5775cb90fc8479bd1c9467c7bd2b4112dc1c6cd066d2"
+    },
+    {
+      "file": "images/period-keyboard-320.png",
+      "width": 320,
+      "height": 844,
+      "bytes": 51311,
+      "sha256": "827f202509111f05b86e59ea3c0b28b98b407f19f14530b8db877a51ca89ed20"
+    },
+    {
+      "file": "images/quality-section-320.png",
+      "width": 320,
+      "height": 844,
+      "bytes": 44899,
+      "sha256": "30b1501d7f953c8b703e1e1d11475ba4a7469ef019885656f166bdb32d804bff"
+    },
+    {
+      "file": "images/synthetic-404-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 55575,
+      "sha256": "4fdac0d88ed95daee94312f196b29165d0f9bbcfbef2e91725c82578d24df921"
+    },
+    {
+      "file": "images/synthetic-UNKNOWN-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 64454,
+      "sha256": "fa52b450947c601fa3bd0afd3c5085288cc4915e9e495bb519bcbf5ac6ab7f78"
+    },
+    {
+      "file": "images/synthetic-YELLOW-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 71863,
+      "sha256": "02669622a1c0d1651d8459efaf030226b2169123f8106e58cc4751c4115a955d"
+    },
+    {
+      "file": "images/table-initial-320.png",
+      "width": 320,
+      "height": 844,
+      "bytes": 50286,
+      "sha256": "0090e14334802279600ccc196a34926b0a9f891f1af3a0bced9060878ca155e3"
+    },
+    {
+      "file": "images/table-initial-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 55508,
+      "sha256": "4840c7c29674872c2a2892a316efc359423d6a01b1874eaecd4fd8f3c46ccf89"
+    },
+    {
+      "file": "images/table-scrolled-320.png",
+      "width": 320,
+      "height": 844,
+      "bytes": 54411,
+      "sha256": "68ce38fabb5b7d7ab41a77d8da5addaed778922be98f51c234fdac89c1844fc7"
+    },
+    {
+      "file": "images/table-scrolled-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 63595,
+      "sha256": "f860aa919e61ade7000b12555a137cc7f73b67eb6ce10d721d272063df795464"
+    },
+    {
+      "file": "images/table-touch-mid-320.png",
+      "width": 320,
+      "height": 844,
+      "bytes": 50750,
+      "sha256": "e58abd392ca2f69de5a2042c38c70fe8f179f84a7d90941fa26ad22a149ca370"
+    },
+    {
+      "file": "images/table-touch-mid-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 59903,
+      "sha256": "622e502a87b59d7caacbe644708fb110b91f26db9392ba2cbbeee2c8585c7efa"
+    },
+    {
+      "file": "images/tooltip-320.png",
+      "width": 320,
+      "height": 844,
+      "bytes": 56204,
+      "sha256": "b2e4a469adda5bc9e789c54ebe339b8ba9acb61873a1c199e441a667366cbe12"
+    },
+    {
+      "file": "images/firefox-films-initial-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 51994,
+      "sha256": "392a82ec400342d88ad132a84764d6961e8e173b946cd0dc5fed8970b24b8307"
+    },
+    {
+      "file": "images/firefox-films-scrolled-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 59842,
+      "sha256": "a914c4da6c49e0406bf2923c6e1f79015bbf689363890b8d980620777a8be389"
+    },
+    {
+      "file": "images/firefox-last7-chart-1440.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 98220,
+      "sha256": "f301a866da146b0e22e5678053c88fda4ac1f35a6ea7d3534fc54b3819c6c55f"
+    },
+    {
+      "file": "images/firefox-overview-1440.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 123604,
+      "sha256": "b7c523851f2afcec42a5736bcfbd4a1b37927768c24a9ac4ed07284f9fdd8190"
+    },
+    {
+      "file": "images/firefox-overview-320.png",
+      "width": 320,
+      "height": 844,
+      "bytes": 54723,
+      "sha256": "b1b682e784fb5a1423e82138fc333658b51c8d3930a5d0f6499ebaf9f202357f"
+    },
+    {
+      "file": "images/firefox-overview-390.png",
+      "width": 390,
+      "height": 844,
+      "bytes": 59674,
+      "sha256": "13170141c3f7191456334720da755491792d94cadebe10d7aed254f25065f5b1"
+    },
+    {
+      "file": "images/firefox-quality-nav-320.png",
+      "width": 320,
+      "height": 844,
+      "bytes": 41652,
+      "sha256": "38bfe2138727cfad9793b48ee85418f73820e7fdb91e919408904d82d6c504fb"
+    }
+  ]
+}
