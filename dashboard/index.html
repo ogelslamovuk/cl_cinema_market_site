@@ -119,15 +119,15 @@
             </article>
 
             <article class="own-metric">
-              <span>Билеты mooon · net</span>
+              <span>Билеты mooon</span>
               <strong data-mirror="ss-import-tickets" data-qa-atomic="amount">—</strong>
               <small>Продажи с учётом возвратов</small>
               <a href="#quality-section">Данные mooon <span aria-hidden="true">↗</span></a>
             </article>
             <article class="own-metric money">
-              <span>Касса mooon · net</span>
+              <span>Касса mooon</span>
               <strong data-mirror="ss-import-revenue" data-qa-atomic="amount">—</strong>
-              <small>По данным mooon · BYN</small>
+              <small>С учётом возвратов · BYN</small>
               <a href="#quality-section">Источники и полнота <span aria-hidden="true">↗</span></a>
             </article>
           </div>
@@ -166,6 +166,7 @@
             <header class="panel-heading"><div><h3>Рынок по дням</h3><p>Билеты: весь рынок и mooon</p></div><span id="daily-count"></span></header>
             <div class="chart-legend"><span>Рынок</span><span>mooon</span></div>
             <div id="daily-trend" class="daily-trend"></div>
+            <p class="daily-trend-hint">Для динамики выбери 7 дней или прокатную неделю.</p>
           </article>
           <div class="geo-stack">
             <article class="panel"><header class="panel-heading"><div><h3>Города</h3><p>Проданные билеты</p></div></header><div id="cities-chart" class="bars"></div></article>
@@ -178,7 +179,8 @@
         <header class="block-heading"><div><span class="section-index">04</span><h2>Контент и площадки</h2></div><p>Фильмы, кинотеатры и время спроса</p></header>
         <article class="panel film-panel">
           <header class="panel-heading"><div><h3>Фильмы рынка</h3><p>mooon, остальные площадки и доля фильма</p></div><span id="film-count"></span></header>
-          <div id="films-table" class="table film-table" tabindex="0" role="region" aria-label="Таблица фильмов — прокрутка по горизонтали" data-ui-scroll="horizontal" data-ui-scroll-reason="Сравнение всех исходных показателей фильма"></div>
+          <p class="table-scroll-cue" id="films-scroll-cue">Все показатели фильма — листай таблицу <span aria-hidden="true">→</span></p>
+          <div id="films-table" class="table film-table" tabindex="0" role="region" aria-label="Таблица фильмов — прокрутка по горизонтали" aria-describedby="films-scroll-cue" data-ui-scroll="horizontal" data-ui-scroll-reason="Сравнение всех исходных показателей фильма"></div>
         </article>
         <div class="split-panels">
           <article class="panel"><header class="panel-heading"><div><h3>Кинотеатры</h3><p>Площадки по объёму продаж</p></div></header><div id="cinemas-chart" class="bars"></div></article>

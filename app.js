@@ -538,9 +538,9 @@ function renderCompetitors(bycardRows, mooonRows) {
     return `<article class="competitor-card${name === "mooon" ? " is-mooon" : ""}">
       <header><span>${esc(name)}</span><small>${esc(quality)}</small></header>
       <dl>
-        <div><dt>Admissions</dt><dd>${nf.format(group.tickets)}</dd></div>
-        <div><dt>Admissions share</dt><dd>${ticketShare === null ? "—" : `${ticketShare.toFixed(1)}%`}</dd></div>
-        <div><dt>% revenue</dt><dd>${revenueShare}</dd></div>
+        <div><dt>Билеты</dt><dd>${nf.format(group.tickets)}</dd></div>
+        <div><dt>Доля билетов</dt><dd>${ticketShare === null ? "—" : `${ticketShare.toFixed(1)}%`}</dd></div>
+        <div><dt>Доля кассы</dt><dd>${revenueShare}</dd></div>
       </dl>
       <div class="competitor-meter" aria-hidden="true"><i style="width:${ticketShare ?? 0}%"></i></div>
       ${coverage !== null && coverage < 100 ? `<b>покрытие ${coverage.toFixed(1)}%</b>` : ""}
@@ -647,7 +647,7 @@ function renderDailyTrend(bycardRows, silverRows) {
   const days = allDays.slice(-14);
   $("daily-count").textContent = allDays.length > days.length
     ? `последние ${days.length} из ${allDays.length} дней`
-    : `${days.length} дней`;
+    : `Дней: ${days.length}`;
   if (!days.length) {
     $("daily-trend").innerHTML = '<div class="muted">Данных за выбранный период пока нет</div>';
     return;
@@ -831,7 +831,7 @@ function renderShare(bycardRows, elapsed, usable, finalUsable, silverRows) {
       return;
     }
     $("share").textContent = `${value.toFixed(1)}%`;
-    $("share-note").textContent = `${nf.format(silverTickets)} Admissions mooon из ${nf.format(observedMarket)} Admissions рынка`;
+    $("share-note").textContent = `${nf.format(silverTickets)} — mooon · ${nf.format(observedMarket)} — рынок`;
     $("share-track").style.width = `${Math.max(0, Math.min(100, value))}%`;
 
     const silverRevenue = silverRows.reduce((sum, row) => sum + row.revenue_byn, 0);
@@ -849,7 +849,7 @@ function renderShare(bycardRows, elapsed, usable, finalUsable, silverRows) {
       $("revenue-share-track").style.width = "0";
     } else {
       $("revenue-share").textContent = `${revenueShare.toFixed(1)}%`;
-      $("revenue-share-note").textContent = `${money.format(silverRevenue)} Revenue mooon из ${money.format(marketRevenueMax)} Revenue рынка`;
+      $("revenue-share-note").textContent = `${money.format(silverRevenue)} — mooon · ${money.format(marketRevenueMax)} — рынок, включая оценку`;
       $("revenue-share-track").style.width = `${Math.max(0, Math.min(100, revenueShare))}%`;
     }
     if (quality.status === "YELLOW") {
@@ -919,7 +919,7 @@ function render() {
   $("average-price").textContent = exactAveragePrice === null
     ? "—"
     : money.format(exactAveragePrice);
-  $("average-price-note").textContent = "mooon + сеансы конкурентов с точным Revenue";
+  $("average-price-note").textContent = "mooon + сеансы конкурентов с точной кассой";
   const seatsWithCapacity = [
     ...usable.filter((row) => row.capacity > 0).map((row) => ({
       capacity: row.capacity,
@@ -960,7 +960,7 @@ function render() {
   $("film-count").textContent = `${films.length} фильмов`;
   $("films-table").innerHTML = `
     <div class="table-row header">
-      <span>Фильм</span><span class="number">Admissions<small>рынок · билеты</small></span><span class="number">Admissions<small>mooon · билеты</small></span><span class="number">Admissions<small>конкуренты · билеты</small></span><span class="number">Revenue<small>рынок · BYN</small></span><span class="number">Revenue<small>mooon · BYN</small></span><span class="number">Доля<small>mooon</small></span><span class="number">Доля фильма<small>в рынке</small></span><span>Прокат</span>
+      <span>Фильм</span><span class="number">Билеты<small>рынок · билеты</small></span><span class="number">Билеты<small>mooon · билеты</small></span><span class="number">Билеты<small>конкуренты · билеты</small></span><span class="number">Касса<small>рынок · BYN</small></span><span class="number">Касса<small>mooon · BYN</small></span><span class="number">Доля<small>mooon</small></span><span class="number">Доля фильма<small>в рынке</small></span><span>Прокат</span>
     </div>` + films.slice(0, 20).map((film) => `
     <div class="table-row">
       <span class="film-name">${esc(film.name)}</span>

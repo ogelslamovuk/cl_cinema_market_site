@@ -46,4 +46,32 @@ html{scroll-padding-top:120px}.nav-pill,.shell{width:calc(100% - 32px)}.brand{fo
 @media(max-width:600px){.trend-svg{overflow:visible}.trend-axis-label,.trend-end-label{font-size:30px}}
 @media(max-width:350px){.trend-axis-label,.trend-end-label{font-size:36px}}
 @media(max-height:500px){.period-popover{position:fixed;top:80px;bottom:16px;left:16px;right:auto;width:min(352px,calc(100vw - 32px));max-height:calc(100dvh - 96px);overflow:auto}}
+/* REVIEW_v01: visible navigation and comparison affordances, consistent readable Russian copy. */
+.table-scroll-cue{display:none}.daily-trend-hint{display:none}
+.trend-panel:has(.trend-svg):not(:has(.trend-market-line)){align-self:start}
+.daily-trend:has(.trend-svg):not(:has(.trend-market-line)){min-height:0;display:block;margin-top:8px}
+.trend-svg:not(:has(.trend-market-line)){height:160px;min-height:0}
+.trend-svg:not(:has(.trend-market-line)) .trend-axis-label{font-size:22px}
+.trend-svg:not(:has(.trend-market-line)) .trend-end-label{font-size:24px}
+.trend-panel:has(.trend-svg):not(:has(.trend-market-line)) .daily-trend-hint{display:block;color:var(--muted);font-size:12px;line-height:1.5;margin:8px 0 0;padding-top:10px;border-top:1px solid var(--rule-soft)}
+@media(max-width:600px){
+ .brand small,.status,.source-primary>span,.source-card header span,.source-card dt,.source-card dd,.competitor-card header>small,.competitor-card dt,.competitor-card dd,.panel-heading p,.panel-heading>span,.block-heading p,.volume-metric small,.signal-strip small,.signal-strip span,.data-disclaimer,.own-metric>small,.own-metric>a,footer,.context-line{font-size:11px}
+ .table-scroll-cue{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0;padding:10px 16px;border-top:1px solid var(--rule-soft);color:var(--accent);background:var(--accent-soft);font-size:12px}
+ .table-scroll-cue>span{font-size:18px;line-height:1;flex:0 0 auto}
+ .table-row.header small,.release-state{font-size:11px}
+ .table-row.header>span:first-child{position:sticky;left:0;z-index:2;background:#f8fafc;padding:4px 8px 4px 0}
+ .table-row{grid-template-columns:160px repeat(7,96px) 120px;min-width:1080px}
+ .table-row.header>span:first-child{align-self:stretch;display:flex;align-items:center}
+ .film-name,.table-row.header>span:first-child{box-shadow:5px 0 9px #1723380a}
+ .trend-svg:not(:has(.trend-market-line)){height:140px}
+ .trend-svg:not(:has(.trend-market-line)) .trend-axis-label,.trend-svg:not(:has(.trend-market-line)) .trend-end-label{font-size:30px}
+ .status{max-width:136px}.brand small{font-size:11px}
+}
+@media(max-width:350px){
+ .nav-links{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;overflow:visible;min-height:68px;margin-top:6px;padding-bottom:4px}
+ .nav-links a{font-size:12px;justify-content:center;min-height:34px}
+ .status{max-width:136px;font-size:11px}.brand small{font-size:11px}
+ .orbit-value>span,.own-metric>span,.own-metric>small,.own-metric>a,.competitor-card dt{font-size:11px}
+ .trend-svg:not(:has(.trend-market-line)) .trend-axis-label,.trend-svg:not(:has(.trend-market-line)) .trend-end-label{font-size:36px}
+}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
