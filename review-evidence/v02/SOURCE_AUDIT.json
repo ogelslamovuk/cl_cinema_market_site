@@ -1,0 +1,70 @@
+{
+  "candidateSha": "d5aa7d5d289d31fbb9c2ec39cd0c6c5d957ed79d",
+  "status": "PASS",
+  "appExactlyApprovedLiteralReplacements": true,
+  "replacements": [
+    {
+      "before": "<dt>Admissions</dt>",
+      "after": "<dt>Билеты</dt>",
+      "count": 1
+    },
+    {
+      "before": "<dt>Admissions share</dt>",
+      "after": "<dt>Доля билетов</dt>",
+      "count": 1
+    },
+    {
+      "before": "<dt>% revenue</dt>",
+      "after": "<dt>Доля кассы</dt>",
+      "count": 1
+    },
+    {
+      "before": "} Admissions mooon из ${",
+      "after": "} — mooon · ${",
+      "count": 1
+    },
+    {
+      "before": "} Admissions рынка",
+      "after": "} — рынок",
+      "count": 1
+    },
+    {
+      "before": "} Revenue mooon из ${",
+      "after": "} — mooon · ${",
+      "count": 1
+    },
+    {
+      "before": "} Revenue рынка",
+      "after": "} — рынок, включая оценку",
+      "count": 1
+    },
+    {
+      "before": "mooon + сеансы конкурентов с точным Revenue",
+      "after": "mooon + сеансы конкурентов с точной кассой",
+      "count": 1
+    },
+    {
+      "before": ">Admissions<small>",
+      "after": ">Билеты<small>",
+      "count": 3
+    },
+    {
+      "before": ">Revenue<small>",
+      "after": ">Касса<small>",
+      "count": 2
+    },
+    {
+      "before": "`${days.length} дней`",
+      "after": "`Дней: ${days.length}`",
+      "count": 1
+    }
+  ],
+  "translationMapSha256": "eacd30c5b6497d82256862b6189a7e16f022da7ccbdaf1075706d57f5103a55d",
+  "baselineAppSha256": "350ef3afea8d2f2221690a3b18383090a1ed9ca25070a68608aa3c73a4b52285",
+  "candidateAppSha256": "f77abfce9a4b98a5e5ff5a7868b8bbe03d310aba03392a6dce2cb39ec5e4cd9e",
+  "protectedFiles": {
+    "auth.js": true,
+    "CNAME": true
+  },
+  "dataDiff": ""
+}

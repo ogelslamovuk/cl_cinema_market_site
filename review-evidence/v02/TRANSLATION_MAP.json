@@ -1,0 +1,36 @@
+{
+  "baselineSiteCommit": "934174f6c4eab83147e837273b7bd6ec171f32c2",
+  "scope": "Only user-facing literal fragments in app.js; apply in this exact order. No expressions, functions, keys, conditions or values change.",
+  "sourceReplacements": [
+    {"before": "<dt>Admissions</dt>", "after": "<dt>Билеты</dt>"},
+    {"before": "<dt>Admissions share</dt>", "after": "<dt>Доля билетов</dt>"},
+    {"before": "<dt>% revenue</dt>", "after": "<dt>Доля кассы</dt>"},
+    {"before": "} Admissions mooon из ${", "after": "} — mooon · ${"},
+    {"before": "} Admissions рынка", "after": "} — рынок"},
+    {"before": "} Revenue mooon из ${", "after": "} — mooon · ${"},
+    {"before": "} Revenue рынка", "after": "} — рынок, включая оценку"},
+    {"before": "mooon + сеансы конкурентов с точным Revenue", "after": "mooon + сеансы конкурентов с точной кассой"},
+    {"before": ">Admissions<small>", "after": ">Билеты<small>"},
+    {"before": ">Revenue<small>", "after": ">Касса<small>"},
+    {"before": "`${days.length} дней`", "after": "`Дней: ${days.length}`"}
+  ],
+  "observedTextEquivalents": [
+    {"before": " Admissions mooon из ", "after": " — mooon · "},
+    {"before": " Admissions рынка", "after": " — рынок"},
+    {"before": " Revenue mooon из ", "after": " — mooon · "},
+    {"before": " Revenue рынка", "after": " — рынок, включая оценку"},
+    {"before": "mooon + сеансы конкурентов с точным Revenue", "after": "mooon + сеансы конкурентов с точной кассой"},
+    {"before": "Admissions share", "after": "Доля билетов"},
+    {"before": "% revenue", "after": "Доля кассы"},
+    {"before": "Admissions", "after": "Билеты"},
+    {"before": "Revenue", "after": "Касса"}
+  ],
+  "observedMetricEquivalents": [
+    {"id": "daily-count", "match": "^(\\d+) дней$", "replacement": "Дней: $1"}
+  ],
+  "staticHtmlReplacements": [
+    {"before": "Билеты mooon · net", "after": "Билеты mooon"},
+    {"before": "Касса mooon · net", "after": "Касса mooon"},
+    {"before": "По данным mooon · BYN", "after": "С учётом возвратов · BYN"}
+  ]
+}
