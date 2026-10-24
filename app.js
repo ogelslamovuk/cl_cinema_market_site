@@ -633,87 +633,57 @@ function renderBars(id, items) {
     </div>`).join("") || '<div class="muted">Данных пока нет</div>';
 }
 
-function renderDailyTrend(bycardRows, silverRows) {
-  const groups = {};
-  const get = (day) => {
-    if (!groups[day]) groups[day] = { day, bycard: 0, silver: 0 };
-    return groups[day];
-  };
-  for (const row of bycardRows) get(row.date).bycard += ticketValue(row) ?? 0;
-  for (const row of silverRows) get(row.date).silver += row.tickets;
-  const allDays = Object.values(groups)
-    .map((group) => ({ ...group, market: group.bycard + group.silver }))
-    .sort((a, b) => a.day.localeCompare(b.day));
-  const days = allDays.slice(-14);
-  $("daily-count").textContent = allDays.length > days.length
-    ? `последние ${days.length} из ${allDays.length} дней`
-    : `Дней: ${days.length}`;
-  if (!days.length) {
-    $("daily-trend").innerHTML = '<div class="muted">Данных за выбранный период пока нет</div>';
+async function renderDailyTrend() {
+  const host = $("daily-trend");
+  if (!host || !globalThis.MarketTrend) return;
+  const request = Symbol("trend");
+  renderDailyTrend.currentRequest = request;
+  const end = publishedPeriodCutoff();
+  if (!end) {
+    host.dataset.trendState = "error";
+    globalThis.MarketTrend.render({ days: [], start: null, end: null, loading: false, filterLabel: "", error: "Нет опубликованной даты для динамики." });
     return;
   }
-
-  if (days.length === 1) {
-    const day = days[0];
-    const scale = Math.max(day.market, 1);
-    const date = new Date(`${day.day}T00:00:00`).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
-    $("daily-trend").innerHTML = `
-      <div class="trend-single" aria-label="Проданные билеты за ${date}">
-        <div class="trend-single-heading"><time datetime="${esc(day.day)}">${date}</time><span>Продано билетов</span></div>
-        <div class="trend-comparison-row">
-          <div class="trend-comparison-label"><span><i aria-hidden="true"></i>Весь рынок</span><strong data-qa-atomic>${nf.format(day.market)}</strong></div>
-          <div class="trend-comparison-track" aria-hidden="true"><span style="width:${day.market / scale * 100}%"></span></div>
-        </div>
-        <div class="trend-comparison-row trend-comparison-mooon">
-          <div class="trend-comparison-label"><span><i aria-hidden="true"></i>mooon</span><strong data-qa-atomic>${nf.format(day.silver)}</strong></div>
-          <div class="trend-comparison-track" aria-hidden="true"><span style="width:${day.silver / scale * 100}%"></span></div>
-        </div>
-        <p class="trend-comparison-note">mooon входит в общий рынок. Длина полос — в едином масштабе от нуля.</p>
-        <p class="trend-single-help">Чтобы увидеть динамику, выбери 7 дней или прокатную неделю в фильтре периода.</p>
-      </div>`;
-    return;
+  const start = addDays(end, -13);
+  const dates = Array.from({ length: 14 }, (_, index) => addDays(start, index));
+  const filters = Object.fromEntries(["region", "city", "cinema", "film"].map((key) => [key, $(key).value]));
+  const filterLabel = Object.values(filters).filter(Boolean).join(" · ") || "Все города · все кинотеатры · все фильмы";
+  const eligibleDates = dates.filter((date) => reportingDateSet.has(date) && !isUnavailableDate(date)
+    && (dataMode !== "partitioned" || partitionIndex.days?.[date]));
+  const pending = dataMode === "partitioned" ? eligibleDates.filter((date) => !loadedDays.has(date)) : [];
+  if (pending.length) {
+    host.dataset.trendState = "loading";
+    globalThis.MarketTrend.render({ days: [], start, end, loading: true, filterLabel });
   }
-
-  const width = 900;
-  const height = 330;
-  const inset = { top: 24, right: 28, bottom: 42, left: 18 };
-  const plotWidth = width - inset.left - inset.right;
-  const plotHeight = height - inset.top - inset.bottom;
-  const max = Math.max(...days.map((day) => day.market), 1);
-  const point = (value, index) => ({
-    x: inset.left + (days.length === 1 ? plotWidth / 2 : index / (days.length - 1) * plotWidth),
-    y: inset.top + plotHeight - value / max * plotHeight,
+  const failed = new Set();
+  const queue = [...pending];
+  await Promise.all(Array.from({ length: Math.min(4, queue.length) }, async () => {
+    while (queue.length) {
+      const date = queue.shift();
+      try { await fetchVerifiedDay(date); } catch (error) { failed.add(date); }
+    }
+  }));
+  if (renderDailyTrend.currentRequest !== request) return;
+  const generatedAt = new Date(source.meta.generated_at).getTime();
+  const matches = (row) => Object.entries(filters).every(([key, value]) => !value || String(row[key]) === value);
+  const available = new Set(eligibleDates);
+  const days = dates.map((day) => {
+    const quality = source.market_quality_by_date?.[day]?.status || "UNKNOWN";
+    if (!available.has(day) || failed.has(day)) {
+      return { day, market: null, silver: null, status: failed.has(day) ? "error" : "unavailable", quality };
+    }
+    const rows = dataMode === "partitioned" ? loadedDays.get(day) : {
+      marketRows: (source.sessions || []).filter((row) => row.date === day),
+      silverRows: (source.silver_screen?.sessions || []).filter((row) => row.date === day),
+    };
+    const competitors = rows.marketRows.filter((row) => matches(row) && new Date(row.stop_sale_at).getTime() <= generatedAt);
+    const own = rows.silverRows.filter((row) => matches(row) && new Date(row.starts_at).getTime() <= generatedAt);
+    const silver = own.reduce((sum, row) => sum + row.tickets, 0);
+    const market = competitors.reduce((sum, row) => sum + (ticketValue(row) ?? 0), 0) + silver;
+    return { day, market, silver, status: "ready", quality };
   });
-  const marketPoints = days.map((day, index) => point(day.market, index));
-  const silverPoints = days.map((day, index) => point(day.silver, index));
-  const path = (points) => points.map((item, index) => `${index ? "L" : "M"}${item.x.toFixed(1)},${item.y.toFixed(1)}`).join(" ");
-  const marketPath = path(marketPoints);
-  const silverPath = path(silverPoints);
-  const areaPath = `${marketPath} L${marketPoints.at(-1).x.toFixed(1)},${(inset.top + plotHeight).toFixed(1)} L${marketPoints[0].x.toFixed(1)},${(inset.top + plotHeight).toFixed(1)} Z`;
-  const labelIndexes = [...new Set([0, Math.floor((days.length - 1) / 2), days.length - 1])];
-  const formatDay = (value) => new Date(`${value}T00:00:00`).toLocaleDateString("ru-RU", { day: "2-digit", month: "short" });
-  const latest = days.at(-1);
-  const latestShare = latest.market && ["GREEN", "YELLOW"].includes(selectedMarketQuality().status)
-    ? `${(latest.silver / latest.market * 100).toFixed(1)}%` : "не рассчитана";
-  $("daily-trend").innerHTML = `
-    <div class="trend-latest">
-      <span class="trend-latest-date">Последний день · ${formatDay(latest.day)}</span>
-      <div><span>Весь рынок</span><strong data-qa-atomic>${nf.format(latest.market)}</strong></div>
-      <div class="trend-latest-mooon"><span>mooon</span><strong data-qa-atomic>${nf.format(latest.silver)}</strong></div>
-    </div>
-    <svg class="trend-svg" viewBox="0 0 ${width} ${height}" role="img" aria-labelledby="trend-title trend-desc">
-      <title id="trend-title">Динамика проданных билетов</title>
-      <desc id="trend-desc">Период ${formatDay(days[0].day)} — ${formatDay(latest.day)}. Последний день: рынок ${nf.format(latest.market)}, mooon ${nf.format(latest.silver)}, доля ${latestShare}.</desc>
-      ${[0, .25, .5, .75, 1].map((tick) => {
-        const y = inset.top + plotHeight * tick;
-        return `<line class="trend-grid" x1="${inset.left}" y1="${y}" x2="${width - inset.right}" y2="${y}"></line>`;
-      }).join("")}
-      <path class="trend-market-area" d="${areaPath}"></path>
-      ${days.length > 1 ? `<path class="trend-market-line" d="${marketPath}"></path><path class="trend-silver-line" d="${silverPath}"></path>` : ""}
-      ${marketPoints.map((item) => `<circle class="trend-point-market" cx="${item.x}" cy="${item.y}" r="3"></circle>`).join("")}
-      ${silverPoints.map((item) => `<circle class="trend-point-silver" cx="${item.x}" cy="${item.y}" r="4"></circle>`).join("")}
-      ${labelIndexes.map((index) => `<text class="trend-axis-label" x="${marketPoints[index].x}" y="${height - 12}" text-anchor="${index === 0 ? "start" : index === days.length - 1 ? "end" : "middle"}">${formatDay(days[index].day)}</text>`).join("")}
-    </svg>`;
+  host.dataset.trendState = days.every((day) => day.status === "ready") ? "ready" : "partial";
+  globalThis.MarketTrend.render({ days, start, end, loading: false, filterLabel, onRetry: () => { void renderDailyTrend(); } });
 }
 
 function syncOrbit(orbitId, trackId) {
@@ -1007,7 +977,7 @@ function render() {
     ...item,
     name: `${String(item.name).padStart(2, "0")}:00`,
   })));
-  renderDailyTrend(elapsed, silverRows);
+  void renderDailyTrend();
 
   const quality = {};
   for (const row of marketRows) quality[row.quality] = (quality[row.quality] || 0) + 1;

@@ -21,7 +21,7 @@
       })();
     </script>
     <link rel="preload" href="../assets/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="../styles.css?v=hnd0003-chart-v01">
+    <link rel="stylesheet" href="../styles.css?v=hnd0003-trend14-v01">
   </head>
   <body class="dashboard-page" data-index-url="../data/market-index.json" data-data-url="../data/market.json">
     <header class="app-chrome">
@@ -171,10 +171,8 @@
         <header class="block-heading"><div><span class="section-index">03</span><h2>Динамика и география</h2></div><p>Как меняется рынок и где сосредоточен спрос</p></header>
         <div class="analysis-layout">
           <article class="panel trend-panel">
-            <header class="panel-heading"><div><h3>Рынок по дням</h3><p>Билеты: весь рынок и mooon</p></div><span id="daily-count"></span></header>
-            <div class="chart-legend"><span>Рынок</span><span>mooon</span></div>
+            <header class="panel-heading"><div><h3>Динамика за 14 дней</h3><p>Объём рынка и вклад mooon по дням</p></div><span id="daily-count">14 дней</span></header>
             <div id="daily-trend" class="daily-trend"></div>
-            <p class="daily-trend-hint">Для динамики выбери 7 дней или прокатную неделю.</p>
           </article>
           <div class="geo-stack">
             <article class="panel"><header class="panel-heading"><div><h3>Города</h3><p>Проданные билеты</p></div></header><div id="cities-chart" class="bars"></div></article>
@@ -226,7 +224,8 @@
       <footer><strong>Доля рынка, динамика и качество данных — в одном срезе.</strong><span>Cinemalab Market Intelligence · mooon · ByCard · Korona · Skyline</span></footer>
     </main>
     <script src="../posters.js?v=hnd0003-v06"></script>
-    <script src="../app.js?v=hnd0003-chart-v01"></script>
+    <script src="../trend.js?v=hnd0003-trend14-v01"></script>
+    <script src="../app.js?v=hnd0003-trend14-v01"></script>
     <script src="../ui.js?v=hnd0003-v06"></script>
   </body>
 </html>
