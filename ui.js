@@ -13,10 +13,13 @@
   panel.addEventListener("keydown", event => {
     if (event.key === "Escape" && mobile.matches) { open = false; syncFilters(); toggle.focus(); }
   });
-  panel.addEventListener("change", () => {
+  function refreshFilterCount() {
     const count = [...panel.querySelectorAll("select")].filter(control => control.value).length;
     document.getElementById("filter-count").textContent = count ? String(count) : "";
-  });
+  }
+  panel.addEventListener("change", refreshFilterCount);
+  new MutationObserver(refreshFilterCount).observe(panel, { childList: true, subtree: true });
+  refreshFilterCount();
   syncFilters();
   document.querySelectorAll("[data-mirror]").forEach(target => {
     const source = document.getElementById(target.dataset.mirror);
