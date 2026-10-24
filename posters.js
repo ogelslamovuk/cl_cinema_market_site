@@ -1,7 +1,7 @@
 /* Read-only mooon media projection. No analytics or classification lives here. */
 (() => {
-  const catalogFile = "catalog.feabac5f2334c185.json";
-  const catalogSha = "feabac5f2334c185bbdb08bf529344f7b166d2c077d09b93cd31bc9fb8613099";
+  const catalogFile = "catalog.eebcc30c5c833cec.json";
+  const catalogSha = "eebcc30c5c833cec4951dd62e04c08813f20baad9d2f659d0b61fa6f6b8b947a";
   const base = new URL("assets/posters/", document.currentScript.src);
   const hex = buffer => [...new Uint8Array(buffer)].map(n => n.toString(16).padStart(2, "0")).join("");
   const digest = async bytes => hex(await crypto.subtle.digest("SHA-256", bytes));

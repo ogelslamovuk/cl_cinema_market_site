@@ -61,6 +61,11 @@
 
   // Project already owns the percentages. This presentation layer validates the
   // existing displayed result and state; it never calculates a market ratio.
+  const shareSpecs = [["share-orbit", "share"], ["revenue-orbit", "revenue-share"]].map(([meterId, valueId]) => {
+    const meter = document.getElementById(meterId);
+    const labelId = meter.getAttribute("aria-labelledby");
+    return { meter, valueId, labelId, label: document.getElementById(labelId).textContent.trim(), description: meter.getAttribute("aria-describedby") };
+  });
   function syncShareDiscs() {
     const banner = document.getElementById("market-quality-state");
     const load = document.getElementById("data-load-state");
@@ -72,20 +77,32 @@
       if (!["GREEN", "YELLOW"].includes(existing.status)) quality = existing.status;
     } catch { quality = "UNKNOWN"; }
     const proven = ["GREEN", "YELLOW"].includes(quality) && !banner.hidden && document.getElementById("unavailable-day").hidden;
-    for (const [meterId, valueId] of [["share-orbit", "share"], ["revenue-orbit", "revenue-share"]]) {
-      const meter = document.getElementById(meterId);
+    for (const { meter, valueId, labelId, label, description } of shareSpecs) {
       const text = document.getElementById(valueId).textContent.trim();
       const match = /^(\d+(?:[.,]\d+)?)%$/.exec(text);
       const value = match ? Number(match[1].replace(",", ".")) : NaN;
       const valid = proven && !busy && !failed && Number.isFinite(value) && value >= 0 && value <= 100;
       meter.style.setProperty("--dial-share", valid ? value : 0);
+      meter.classList.toggle("has-wide-value", valid && text.length > 5);
       meter.dataset.dialState = busy ? "loading" : failed ? "error" : !valid ? "unavailable" : quality === "YELLOW" ? "provisional" : "verified";
       if (valid) {
+        meter.setAttribute("role", "meter");
+        meter.setAttribute("aria-labelledby", labelId);
+        meter.setAttribute("aria-describedby", description);
+        meter.removeAttribute("aria-label");
+        meter.setAttribute("aria-valuemin", "0");
+        meter.setAttribute("aria-valuemax", "100");
         meter.setAttribute("aria-valuenow", String(value));
         meter.setAttribute("aria-valuetext", `${text} mooon${quality === "YELLOW" ? ", неполная выборка" : ""}`);
       } else {
+        meter.setAttribute("role", "img");
+        meter.removeAttribute("aria-labelledby");
+        meter.removeAttribute("aria-describedby");
         meter.removeAttribute("aria-valuenow");
-        meter.setAttribute("aria-valuetext", busy ? "Доля загружается" : failed ? "Доля недоступна: ошибка данных" : "Доля не подтверждена");
+        meter.removeAttribute("aria-valuetext");
+        meter.removeAttribute("aria-valuemin");
+        meter.removeAttribute("aria-valuemax");
+        meter.setAttribute("aria-label", `${label}: ${busy ? "доля загружается" : failed ? "доля недоступна: ошибка данных" : "доля не подтверждена"}`);
       }
     }
   }

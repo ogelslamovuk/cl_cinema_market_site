@@ -146,4 +146,5 @@ html{scroll-padding-top:120px}.nav-pill,.shell{width:calc(100% - 32px)}.brand{fo
 .film-poster.is-missing::after{content:attr(data-poster-label);font-size:12px;line-height:1;position:absolute;bottom:1px;right:2px;color:#8c6a31;background:#f8f1e5}
 .table-row:not(.header){padding-block:10px}
 @media(max-width:600px){.own-metric.money.has-long-value,.volume-metric.has-long-value{grid-column:1/-1}.own-metric.money.has-long-value{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px}.own-metric.money.has-long-value>strong{margin:0;font-size:22px}.volume-metric.has-long-value strong{font-size:22px}}
+@media(max-width:600px){.decision-stage:has(.share-composition.has-wide-value) .share-composition{flex-direction:column;align-items:flex-start;gap:6px}.decision-stage:has(.share-composition.has-wide-value) .share-reading{flex:none}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{transition:none!important;animation:none!important}}
