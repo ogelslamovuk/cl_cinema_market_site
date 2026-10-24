@@ -43,9 +43,10 @@
     const plot = root?.querySelector(".trend-plot");
     if (!plot || !model?.days?.length) return;
     const width = Math.max(220, Math.floor(plot.clientWidth));
-    const compact = width < 460;
-    const height = compact ? 248 : 272;
-    const top = 14, bottom = height - 34;
+    const compact = width < 760;
+    const rowHeight = 38;
+    const height = compact ? 34 + model.days.length * rowHeight + 34 : 292;
+    const top = 34, bottom = height - 34;
     const max = Math.max(0, ...model.days.filter(available).flatMap(day => [day.market, day.silver].filter(v => typeof v === "number" && Number.isFinite(v))));
     const rawStep = Math.max(1, max / 4);
     const magnitude = 10 ** Math.floor(Math.log10(rawStep));
@@ -58,6 +59,34 @@
     const barWidth = Math.min(compact ? 17 : 32, slot * .66);
     const y = amount => bottom - Math.max(0, amount || 0) / limit * (bottom - top);
     const ticks = [0, .25, .5, .75, 1];
+    if (compact) {
+      const barLeft = 54, barRight = width - 62;
+      const x = amount => barLeft + Math.max(0, amount || 0) / limit * (barRight - barLeft);
+      plot.innerHTML = `<svg class="timeline-horizontal" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" aria-hidden="true" focusable="false">
+        <defs><pattern id="trend-missing-hatch" width="5" height="5" patternUnits="userSpaceOnUse"><path d="M-1 1L1-1M0 5L5 0M4 6L6 4" stroke="currentColor" stroke-width="1"/></pattern></defs>
+        <text class="timeline-axis" x="0" y="16">Дата</text><text class="timeline-axis timeline-share-heading" x="${width - 2}" y="16" text-anchor="end">Доля mooon</text>
+        ${[0, .5, 1].map(tick => `<line class="timeline-grid" x1="${x(limit * tick)}" y1="${top - 4}" x2="${x(limit * tick)}" y2="${bottom}"/><text class="timeline-axis" x="${x(limit * tick)}" y="${height - 12}" text-anchor="${tick === 0 ? "start" : tick === 1 ? "end" : "middle"}">${number.format(limit * tick)}</text>`).join("")}
+        ${model.days.map((day, index) => {
+          const center = top + rowHeight * (index + .5);
+          const missing = !available(day) || day.market === null || day.silver === null;
+          return `<g class="trend-day-column${index === selected ? " is-selected" : ""}${missing ? " is-unavailable" : ""}" data-day-index="${index}">
+            <rect class="timeline-selection" x="0" y="${center - rowHeight / 2 + 2}" width="${width}" height="${rowHeight - 4}" rx="5"/>
+            <text class="timeline-date" x="0" y="${center + 4}">${date(day.day)}</text>
+            ${missing ? `<rect class="timeline-missing" x="${barLeft}" y="${center - 10}" width="24" height="20" rx="3"/>` : `
+            <rect class="timeline-market" x="${barLeft}" y="${center - 10}" width="${Math.max(0, x(day.market) - barLeft)}" height="20" rx="3"/>
+            <rect class="timeline-mooon" x="${barLeft}" y="${center - 5}" width="${Math.max(0, x(day.silver) - barLeft)}" height="10" rx="2"/>
+            ${day.market === 0 ? `<circle class="timeline-zero" cx="${barLeft}" cy="${center}" r="3"/>` : ""}
+            ${day.silver === 0 ? `<line class="timeline-zero-mooon" x1="${barLeft}" x2="${barLeft}" y1="${center - 3}" y2="${center + 3}"/>` : ""}`}
+            <text class="timeline-share-label${share(day) === "—" ? " is-unavailable" : ""}" x="${width - 2}" y="${center + 4}" text-anchor="end">${share(day)}</text>
+            <title>${date(day.day, true)}. Весь рынок: ${available(day) ? value(day.market) : "нет данных"}. mooon: ${available(day) ? value(day.silver) : "нет данных"}. Доля mooon: ${share(day)}. ${shareNote(day)}. ${dayStatus(day)}</title>
+          </g>`;
+        }).join("")}
+      </svg>`;
+      plot.dataset.orientation = "horizontal";
+      plot.dataset.plotTop = String(top);
+      plot.dataset.plotBottom = String(bottom);
+      return;
+    }
     const markup = `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" aria-hidden="true" focusable="false">
       <defs><pattern id="trend-missing-hatch" width="5" height="5" patternUnits="userSpaceOnUse"><path d="M-1 1L1-1M0 5L5 0M4 6L6 4" stroke="currentColor" stroke-width="1"/></pattern></defs>
       ${ticks.map(tick => { const position = y(limit * tick); return `<line class="timeline-grid" x1="${left}" y1="${position}" x2="${right}" y2="${position}"/><text class="timeline-axis" x="${left - 8}" y="${position + 4}" text-anchor="end">${number.format(limit * tick)}</text>`; }).join("")}
@@ -69,17 +98,19 @@
         const showLabel = !compact || index === lastIndex || (index % 2 === 0 && index < lastIndex - 1);
         return `<g class="trend-day-column${index === selected ? " is-selected" : ""}${missing ? " is-unavailable" : ""}" data-day-index="${index}">
           <rect class="timeline-selection" x="${center - slot / 2 + 1}" y="${top - 8}" width="${slot - 2}" height="${bottom - top + 16}" rx="5"/>
-          ${missing ? `<rect class="timeline-missing" x="${center - barWidth / 2}" y="${bottom - 36}" width="${barWidth}" height="36" rx="3"/><text class="timeline-gap" x="${center}" y="${bottom - 44}" text-anchor="middle">—</text>` : `
+          ${missing ? `<rect class="timeline-missing" x="${center - barWidth / 2}" y="${bottom - 36}" width="${barWidth}" height="36" rx="3"/>` : `
           <rect class="timeline-market" x="${center - barWidth / 2}" y="${marketY}" width="${barWidth}" height="${Math.max(0, bottom - marketY)}" rx="${Math.min(4, barWidth / 3)}"/>
           <rect class="timeline-mooon" x="${center - barWidth * .28}" y="${silverY}" width="${barWidth * .56}" height="${Math.max(0, bottom - silverY)}" rx="${Math.min(3, barWidth / 4)}"/>
           ${day.market === 0 ? `<circle class="timeline-zero" cx="${center}" cy="${bottom}" r="3"/>` : ""}
           ${day.silver === 0 ? `<line class="timeline-zero-mooon" x1="${center - 3}" x2="${center + 3}" y1="${bottom}" y2="${bottom}"/>` : ""}`}
+          <text class="timeline-share-label${share(day) === "—" ? " is-unavailable" : ""}" x="${center}" y="${missing ? bottom - 44 : Math.min(marketY, silverY) - 9}" text-anchor="middle">${share(day)}</text>
           ${showLabel ? `<text class="timeline-date" x="${center}" y="${height - 12}" text-anchor="middle">${new Date(`${day.day}T00:00:00`).getDate()}</text>` : ""}
           <title>${date(day.day, true)}. Весь рынок: ${available(day) ? value(day.market) : "нет данных"}. mooon: ${available(day) ? value(day.silver) : "нет данных"}. Доля mooon: ${share(day)}. ${shareNote(day)}. ${dayStatus(day)}</title>
         </g>`;
       }).join("")}
     </svg>`;
     plot.innerHTML = markup;
+    plot.dataset.orientation = "vertical";
     plot.dataset.plotLeft = String(left);
     plot.dataset.plotRight = String(right);
   }
@@ -109,7 +140,7 @@
     root.innerHTML = `
       <div class="trend-range"><span>${date(input.start)} — ${date(input.end, true)}</span><small>${escape(input.filterLabel || "Все города и кинотеатры")}</small></div>
       <div class="trend-inspector" aria-live="polite" aria-atomic="true"></div>
-      <div class="timeline-legend"><span><i></i>Весь рынок</span><span><i></i>mooon <small>в составе рынка</small></span><span>Билеты</span></div>
+      <div class="timeline-legend"><span><i></i>Весь рынок</span><span><i></i>mooon <small>в составе рынка</small></span><span>Билеты · подписи — доля mooon</span></div>
       <div class="trend-plot" tabindex="0" role="group"></div>
       <div class="trend-day-controls"><span>Выбери день на графике</span><div><button class="trend-day-prev" type="button" aria-label="Предыдущий день">←</button><span class="trend-day-position"></span><button class="trend-day-next" type="button" aria-label="Следующий день">→</button></div></div>
       ${gaps || partial || input.error ? `<div class="timeline-availability" role="status"><span>${gaps ? `Нет данных: ${gaps} из ${input.days.length} дней. Штриховка обозначает пропуск, а не ноль. ` : ""}${partial ? `Неполное покрытие или ограничение качества: ${partial} дн. ` : ""}${input.error ? escape(input.error) : ""}</span>${input.days.some(day => day.status === "error") && typeof input.onRetry === "function" ? '<button class="timeline-retry" type="button">Повторить загрузку</button>' : ""}</div>` : ""}
@@ -120,6 +151,13 @@
     selectDay(selected);
     const choose = event => {
       const bounds = plot.getBoundingClientRect();
+      if (plot.dataset.orientation === "horizontal") {
+        const top = Number(plot.dataset.plotTop), bottom = Number(plot.dataset.plotBottom);
+        const relative = event.clientY - bounds.top;
+        if (relative < top || relative > bottom) return;
+        selectDay(Math.floor((relative - top) / (bottom - top) * model.days.length));
+        return;
+      }
       const left = Number(plot.dataset.plotLeft), right = Number(plot.dataset.plotRight);
       const relative = event.clientX - bounds.left;
       if (relative < left || relative > right) return;
@@ -128,7 +166,7 @@
     plot.addEventListener("pointermove", event => { if (event.pointerType === "mouse" || event.buttons) choose(event); });
     plot.addEventListener("pointerdown", event => { choose(event); if (event.pointerType !== "mouse") plot.setPointerCapture(event.pointerId); });
     plot.addEventListener("keydown", event => {
-      const offset = { ArrowLeft: -1, ArrowRight: 1, Home: -selected, End: model.days.length - selected - 1 }[event.key];
+      const offset = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -1, ArrowDown: 1, Home: -selected, End: model.days.length - selected - 1 }[event.key];
       if (offset === undefined) return;
       event.preventDefault(); selectDay(selected + offset);
     });
