@@ -29,10 +29,24 @@
   });
   const links = [...document.querySelectorAll(".nav-links a")];
   const sections = links.map(link => document.querySelector(link.getAttribute("href")));
-  const observer = new IntersectionObserver(entries => {
-    const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-    if (!visible) return;
-    links.forEach(link => { if (link.hash === `#${visible.target.id}`) link.setAttribute("aria-current", "location"); else link.removeAttribute("aria-current"); });
-  }, { rootMargin: "-110px 0px -65% 0px" });
-  sections.forEach(section => observer.observe(section));
+  function markSection(section) {
+    links.forEach(link => { if (link.hash === `#${section.id}`) link.setAttribute("aria-current", "location"); else link.removeAttribute("aria-current"); });
+  }
+  function syncSection() {
+    // Read every section, rather than only changed observer entries. The reading
+    // line includes the two-row mobile header and the existing anchor spacing.
+    const line = Math.max(document.querySelector(".app-chrome").getBoundingClientRect().bottom + 24, innerHeight * .4);
+    const current = sections.filter(section => section.getBoundingClientRect().top <= line).at(-1) || sections[0];
+    markSection(current);
+  }
+  let sectionFrame;
+  function queueSectionSync() {
+    if (sectionFrame) return;
+    sectionFrame = requestAnimationFrame(() => { sectionFrame = null; syncSection(); });
+  }
+  links.forEach(link => link.addEventListener("click", () => markSection(document.querySelector(link.hash))));
+  addEventListener("hashchange", queueSectionSync);
+  addEventListener("scroll", queueSectionSync, { passive: true });
+  addEventListener("resize", queueSectionSync);
+  syncSection();
 })();
