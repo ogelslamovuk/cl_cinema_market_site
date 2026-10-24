@@ -680,7 +680,9 @@ async function renderDailyTrend() {
     const own = rows.silverRows.filter((row) => matches(row) && new Date(row.starts_at).getTime() <= generatedAt);
     const silver = own.reduce((sum, row) => sum + row.tickets, 0);
     const market = competitors.reduce((sum, row) => sum + (ticketValue(row) ?? 0), 0) + silver;
-    return { day, market, silver, status: "ready", quality };
+    const shareAllowed = ["GREEN", "YELLOW"].includes(quality)
+      && String(source.silver_screen?.status || "").startsWith("ready");
+    return { day, market, silver, status: "ready", quality, shareAllowed };
   });
   host.dataset.trendState = days.every((day) => day.status === "ready") ? "ready" : "partial";
   globalThis.MarketTrend.render({ days, start, end, loading: false, filterLabel, onRetry: () => { void renderDailyTrend(); } });
