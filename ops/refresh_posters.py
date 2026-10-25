@@ -144,7 +144,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--site-repo',type=pathlib.Path,required=True)
     parser.add_argument('--db-config',type=pathlib.Path,required=True)
-    parser.add_argument('--worktree',type=pathlib.Path,default=pathlib.Path('/var/lib/cinema-market/poster-site'))
+    parser.add_argument('--worktree',type=pathlib.Path,default=pathlib.Path('/var/lib/cinema-market/runtime/posters/site'))
     parser.add_argument('--code-root',type=pathlib.Path,default=pathlib.Path('/opt/cinema-market-current'))
     parser.add_argument('--output',type=pathlib.Path)
     parser.add_argument('--publish',action='store_true')
