@@ -1159,8 +1159,8 @@ function render() {
       <span class="number">${nf.format(film.marketTickets)}</span>
       <span class="number">${nf.format(film.silverTickets)}</span>
       <span class="number">${nf.format(film.otherTickets)}</span>
-      <span class="number">${nf.format(Math.round(film.marketRevenue))}</span>
-      <span class="number">${nf.format(Math.round(film.silverRevenue))}</span>
+      <span class="number">${nf.format(Math.round(Number(film.marketRevenue.toFixed(2))))}</span>
+      <span class="number">${nf.format(Math.round(Number(film.silverRevenue.toFixed(2))))}</span>
       <span class="number">${!sharesAllowed || film.silverSharePct === null ? "—" : `${film.silverSharePct.toFixed(1)}%`}</span>
       <span class="number">${!sharesAllowed || film.marketSharePct === null ? "—" : `${film.marketSharePct.toFixed(1)}%`}</span>
       <span class="release-state ${film.releaseScope}">${releaseLabels[film.releaseScope]}</span>
