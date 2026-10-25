@@ -148,6 +148,7 @@ async function fetchVerifiedDay(date) {
       throw new Error(`Файл данных за ${formatDay(date)} повреждён.`);
     }
     const rows = rowsFromDayPayload(payload, date);
+    rows.verifiedSha256 = actualHash;
     loadedDays.set(date, rows);
     source.sessions.push(...rows.marketRows);
     source.silver_screen.sessions.push(...rows.silverRows);
@@ -565,7 +566,7 @@ function renderCompetitors(bycardRows, mooonRows) {
       <dl>
         <div><dt>Билеты</dt><dd>${nf.format(group.tickets)}</dd></div>
         <div><dt>Доля билетов</dt><dd>${ticketShare === null ? "—" : `${ticketShare.toFixed(1)}%`}</dd></div>
-        <div><dt>Доля кассы</dt><dd>${revenueShare}</dd></div>
+        <div><dt>Доля выручки</dt><dd>${revenueShare}</dd></div>
       </dl>
       <div class="competitor-meter" aria-hidden="true"><i style="width:${ticketShare ?? 0}%"></i></div>
       ${coverage !== null && coverage < 100 ? `<b>покрытие ${coverage.toFixed(1)}%</b>` : ""}
@@ -713,6 +714,169 @@ async function renderDailyTrend() {
   globalThis.MarketTrend.render({ days, start, end, loading: false, filterLabel, onRetry: () => { void renderDailyTrend(); } });
 }
 
+// The compact KPI compares one delivered day with that calendar day minus seven.
+// Its stricter comparison gate does not alter market totals or existing share rules.
+function attendanceDayQuality(date) {
+  const quality = source.market_quality_by_date?.[date];
+  const entry = partitionIndex?.days?.[date];
+  const published = reportingDateSet.has(date) && !isUnavailableDate(date)
+    && date <= publishedPeriodCutoff();
+  const proof = quality?.verified === true || quality?.verification_basis === "delivered_close_ledger";
+  if (dataMode !== "partitioned" || !published || !entry?.url
+      || !/^[a-f0-9]{64}$/.test(normalizeSha256(entry.sha256))
+      || quality?.status !== "GREEN" || quality.publishable !== true || !proof
+      || quality.verified === false || quality.mooon_verified === false || quality.shares_reliable === false
+      || !Number.isFinite(quality.coverage_pct) || quality.coverage_pct < 95 || quality.coverage_pct > 100
+      || !String(source.silver_screen?.status || "").startsWith("ready")) return null;
+  if ((quality.date && quality.date !== date)
+      || (quality.policy && quality.policy !== source.meta.market_quality_policy)) return null;
+  for (const assessment of Object.values(quality.sources || {})) {
+    if (!assessment || typeof assessment !== "object" || assessment.date !== date || assessment.schedule_evidence?.complete !== true
+        || !Number.isInteger(assessment.total) || !Number.isInteger(assessment.usable)
+        || assessment.usable < 0 || assessment.usable > assessment.total
+        || (assessment.total === 0 && assessment.zero_sessions_verified !== true)) return null;
+  }
+  return quality;
+}
+
+function attendanceDaySnapshot(rows, filters) {
+  const generatedAt = new Date(source.meta.generated_at).getTime();
+  const marketRows = rows.marketRows.filter((row) => new Date(row.stop_sale_at).getTime() <= generatedAt);
+  const ownRows = rows.silverRows.filter((row) => new Date(row.starts_at).getTime() <= generatedAt);
+  const footprint = [
+    ...marketRows.map((row) => `${providerForSession(row)}:${row.cinema_id ?? row.cinema}`),
+    ...ownRows.map((row) => `mooon:${row.cinema_id ?? row.cinema}`),
+  ];
+  const matches = (row) => Object.entries(filters).every(([key, value]) => !value || String(row[key]) === value);
+  const competitors = marketRows.filter(matches);
+  const own = ownRows.filter(matches);
+  const measured = competitors.filter((row) => ticketValue(row) !== null);
+  const providers = [...new Set(competitors.map(providerForSession))].sort();
+  const usable = competitors.length + own.length > 0
+    && providers.every((provider) => measured.some((row) => providerForSession(row) === provider))
+    && measured.every((row) => Number.isFinite(ticketValue(row)))
+    && own.every((row) => Number.isFinite(row.tickets));
+  const silver = own.reduce((sum, row) => sum + row.tickets, 0);
+  const other = measured.reduce((sum, row) => sum + ticketValue(row), 0);
+  return {
+    usable, market: silver + other, silver, competitors: other,
+    total: marketRows.length,
+    measured: marketRows.filter((row) => ticketValue(row) !== null).length,
+    sourceCounts: Object.fromEntries([...new Set(marketRows.map(providerForSession))].map((provider) => {
+      const observations = marketRows.filter((row) => providerForSession(row) === provider);
+      return [provider, { total: observations.length, usable: observations.filter((row) => ticketValue(row) !== null).length }];
+    })),
+    footprint: [...new Set(footprint)].sort().join("|"),
+    filteredFootprint: [...new Set([
+      ...competitors.map((row) => `${providerForSession(row)}:${row.cinema_id ?? row.cinema}`),
+      ...own.map((row) => `mooon:${row.cinema_id ?? row.cinema}`),
+    ])].sort().join("|"),
+    coverage: competitors.length ? measured.length / competitors.length * 100 : null,
+    providers: [...new Set(marketRows.map(providerForSession))].sort().join("|"),
+    scope: [...providers, ...(own.length ? ["mooon"] : [])].sort().join("|"),
+  };
+}
+
+function attendanceDelta(current, previous) {
+  if (!Number.isFinite(current) || !Number.isFinite(previous) || previous <= 0) return null;
+  return 100 * (current / previous - 1);
+}
+
+function attendancePercent(value) {
+  if (value === null || !Number.isFinite(value)) return "—";
+  const rounded = Math.round(value * 10) / 10;
+  const magnitude = Math.abs(rounded).toLocaleString("ru-RU", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  return `${rounded < 0 ? "−" : "+"}${magnitude}%`;
+}
+
+function resetAttendanceChange(state, note) {
+  renderAttendanceChange.currentRequest = Symbol("attendance");
+  const host = document.querySelector(".attendance-signal");
+  if (!host) return null;
+  host.dataset.attendanceState = state;
+  host.setAttribute("aria-busy", String(state === "loading"));
+  $("attendance-change").textContent = "—";
+  $("attendance-note").textContent = note;
+  $("attendance-breakdown").textContent = "";
+  return host;
+}
+
+async function renderAttendanceChange() {
+  const period = $("period").value;
+  if (!period.startsWith("d:")) {
+    resetAttendanceChange("unavailable", "Выбери день");
+    return;
+  }
+  const day = period.slice(2);
+  const previousDay = addDays(day, -7);
+  const currentQuality = attendanceDayQuality(day);
+  const previousQuality = attendanceDayQuality(previousDay);
+  if (!currentQuality || !previousQuality) {
+    resetAttendanceChange("unavailable", "Нет подтверждённых данных для сравнения");
+    return;
+  }
+  if (Math.abs(currentQuality.coverage_pct - previousQuality.coverage_pct) > 2) {
+    resetAttendanceChange("unavailable", "Разница полноты данных больше 2 п.п.");
+    return;
+  }
+  const host = resetAttendanceChange("loading", "Загрузка сравнения…");
+  if (!host) return;
+  const request = renderAttendanceChange.currentRequest;
+  const filters = Object.fromEntries(["region", "city", "cinema", "film"].map((key) => [key, $(key).value]));
+  try {
+    const currentRows = loadedDays.get(day);
+    if (!currentRows || currentRows.verifiedSha256 !== normalizeSha256(partitionIndex.days[day].sha256)) {
+      throw new Error("Нет проверенных данных выбранного дня");
+    }
+    const previousRows = await fetchVerifiedDay(previousDay);
+    if (previousRows.verifiedSha256 !== normalizeSha256(partitionIndex.days[previousDay].sha256)) {
+      throw new Error("Нет проверенных данных сравнения");
+    }
+    if (request !== renderAttendanceChange.currentRequest) return;
+    const current = attendanceDaySnapshot(currentRows, filters);
+    const previous = attendanceDaySnapshot(previousRows, filters);
+    const sourceMetadataMatches = (quality, snapshot) => {
+      const providers = Object.keys(quality.sources || {});
+      const coverage = snapshot.total ? snapshot.measured / snapshot.total * 100 : null;
+      return quality.total === snapshot.total && quality.usable === snapshot.measured
+        && coverage !== null && Math.abs(quality.coverage_pct - coverage) <= 0.01
+        && ((!providers.length && quality.verification_basis === "delivered_close_ledger") || (providers.sort().join("|") === snapshot.providers
+          && providers.every((provider) => quality.sources[provider].total === snapshot.sourceCounts[provider].total
+            && quality.sources[provider].usable === snapshot.sourceCounts[provider].usable)));
+    };
+    if (!current.usable || !previous.usable || current.footprint !== previous.footprint || current.scope !== previous.scope) {
+      resetAttendanceChange("unavailable", "Нет сопоставимых данных для выбранных фильтров");
+      return;
+    }
+    if (!sourceMetadataMatches(currentQuality, current) || !sourceMetadataMatches(previousQuality, previous)) {
+      resetAttendanceChange("unavailable", "Изменился подтверждённый состав источников");
+      return;
+    }
+    if (Object.values(filters).some(Boolean)
+        && (current.filteredFootprint !== previous.filteredFootprint
+          || (current.coverage !== null && previous.coverage !== null
+            && (current.coverage < 95 || previous.coverage < 95 || Math.abs(current.coverage - previous.coverage) > 2)))) {
+      resetAttendanceChange("unavailable", "Нет сопоставимого покрытия выбранных фильтров");
+      return;
+    }
+    const market = attendanceDelta(current.market, previous.market);
+    if (market === null) {
+      resetAttendanceChange("unavailable", "Нет положительной базы для сравнения");
+      return;
+    }
+    const weekdays = ["к прошлому воскресенью", "к прошлому понедельнику", "к прошлому вторнику", "к прошлой среде", "к прошлому четвергу", "к прошлой пятнице", "к прошлой субботе"];
+    $("attendance-change").textContent = attendancePercent(market);
+    $("attendance-note").textContent = weekdays[new Date(`${day}T12:00:00Z`).getUTCDay()];
+    $("attendance-breakdown").innerHTML = `<span data-qa-atomic="amount">mooon ${attendancePercent(attendanceDelta(current.silver, previous.silver))}</span> · <span data-qa-atomic="amount">конкуренты ${attendancePercent(attendanceDelta(current.competitors, previous.competitors))}</span>`;
+    host.dataset.attendanceState = "ready";
+    host.setAttribute("aria-busy", "false");
+  } catch (error) {
+    if (request === renderAttendanceChange.currentRequest) {
+      resetAttendanceChange("unavailable", "Не удалось проверить день сравнения");
+    }
+  }
+}
+
 function syncOrbit(orbitId, trackId) {
   const orbit = $(orbitId);
   const raw = parseFloat($(trackId).style.width || "0");
@@ -836,7 +1000,7 @@ function renderShare(bycardRows, elapsed, usable, finalUsable, silverRows) {
     $("share-note").textContent = tickets ? `mooon ${nf.format(tickets)} · в выбранном разрезе конкуренты 0` : "В выбранном разрезе нет проданных билетов";
     $("share-track").style.width = tickets ? "100%" : "0";
     $("revenue-share").textContent = revenue ? "100.0%" : "—";
-    $("revenue-share-note").textContent = revenue ? `mooon ${money.format(revenue)} · в выбранном разрезе конкуренты 0` : "В выбранном разрезе нет кассы";
+    $("revenue-share-note").textContent = revenue ? `mooon ${money.format(revenue)} · в выбранном разрезе конкуренты 0` : "В выбранном разрезе нет выручки";
     $("revenue-share-track").style.width = revenue ? "100%" : "0";
     if (quality.status === "YELLOW") {
       $("share-note").textContent = "Неполная выборка · ограниченная надёжность. " + $("share-note").textContent;
@@ -872,11 +1036,11 @@ function renderShare(bycardRows, elapsed, usable, finalUsable, silverRows) {
     const revenueShare = marketRevenueMax ? silverRevenue / marketRevenueMax * 100 : null;
     if (revenueShare === null) {
       $("revenue-share").textContent = "—";
-      $("revenue-share-note").textContent = "В выбранном разрезе нет кассы";
+      $("revenue-share-note").textContent = "В выбранном разрезе нет выручки";
       $("revenue-share-track").style.width = "0";
     } else {
       $("revenue-share").textContent = `${revenueShare.toFixed(1)}%`;
-      $("revenue-share-note").textContent = `${money.format(silverRevenue)} — mooon · ${money.format(marketRevenueMax)} — рынок, включая оценку`;
+      $("revenue-share-note").textContent = `${money.format(silverRevenue)} — mooon · ${money.format(marketRevenueMax)} — рынок`;
       $("revenue-share-track").style.width = `${Math.max(0, Math.min(100, revenueShare))}%`;
     }
     if (quality.status === "YELLOW") {
@@ -900,6 +1064,7 @@ function renderShare(bycardRows, elapsed, usable, finalUsable, silverRows) {
 }
 
 function render() {
+  void renderAttendanceChange();
   if (renderAvailabilityState()) return;
   const rows = selectedRows();
   const sharesAllowed = ["GREEN", "YELLOW"].includes(selectedMarketQuality().status);
@@ -935,7 +1100,7 @@ function render() {
     ? `Охвачено ${coverage.toFixed(1).replace(".", ",")}% завершённых сеансов:`
     : "Данных пока нет.";
   $("coverage-note").textContent = elapsed.length
-    ? `${usable.length} из ${elapsed.length}. Итоговые показатели могут быть занижены из-за ${elapsed.length - usable.length} пропущенных сеансов.`
+    ? `${usable.length} из ${elapsed.length}`
     : "В выбранном периоде продажи ещё не завершились.";
 
   $("sessions-total").textContent = nf.format(elapsed.length + silverRows.length);
@@ -946,7 +1111,7 @@ function render() {
   $("average-price").textContent = exactAveragePrice === null
     ? "—"
     : money.format(exactAveragePrice);
-  $("average-price-note").textContent = "mooon + сеансы конкурентов с точной кассой";
+  $("average-price-note").textContent = "mooon + сеансы конкурентов";
   const seatsWithCapacity = [
     ...usable.filter((row) => row.capacity > 0).map((row) => ({
       capacity: row.capacity,
@@ -987,15 +1152,15 @@ function render() {
   $("film-count").textContent = `${films.length} фильмов`;
   $("films-table").innerHTML = `
     <div class="table-row header">
-      <span>Фильм</span><span class="number">Билеты<small>Весь рынок</small></span><span class="number">Билеты<small>Только mooon</small></span><span class="number">Билеты<small>Конкуренты</small></span><span class="number">Касса<small>рынок · BYN</small></span><span class="number">Касса<small>mooon · BYN</small></span><span class="number">Доля<small>mooon</small></span><span class="number">Доля фильма<small>в рынке</small></span><span>Прокат</span>
+      <span>Фильм</span><span class="number">Билеты<small>Весь рынок</small></span><span class="number">Билеты<small>Только mooon</small></span><span class="number">Билеты<small>Конкуренты</small></span><span class="number">Выручка<small>рынок · BYN</small></span><span class="number">Выручка<small>mooon · BYN</small></span><span class="number">Доля<small>mooon</small></span><span class="number">Доля фильма<small>в рынке</small></span><span>Прокат</span>
     </div>` + films.slice(0, 20).map((film) => `
     <div class="table-row">
       <span class="film-name film-identity" data-poster-scope="${film.releaseScope}"><span class="film-poster" aria-hidden="true"></span><span class="film-title">${esc(film.name)}</span></span>
       <span class="number">${nf.format(film.marketTickets)}</span>
       <span class="number">${nf.format(film.silverTickets)}</span>
       <span class="number">${nf.format(film.otherTickets)}</span>
-      <span class="number">${nf.format(Math.round(film.marketRevenue))}</span>
-      <span class="number">${nf.format(Math.round(film.silverRevenue))}</span>
+      <span class="number">${nf.format(Math.round(Number(film.marketRevenue.toFixed(2))))}</span>
+      <span class="number">${nf.format(Math.round(Number(film.silverRevenue.toFixed(2))))}</span>
       <span class="number">${!sharesAllowed || film.silverSharePct === null ? "—" : `${film.silverSharePct.toFixed(1)}%`}</span>
       <span class="number">${!sharesAllowed || film.marketSharePct === null ? "—" : `${film.marketSharePct.toFixed(1)}%`}</span>
       <span class="release-state ${film.releaseScope}">${releaseLabels[film.releaseScope]}</span>
@@ -1019,7 +1184,7 @@ function render() {
     availability_estimate: "Оценка по карте мест",
     closed_before_capture: "Закрыто до снимка",
     general_admission_unverified: "Без нумерованных мест",
-    not_captured: "Снимок ещё не получен",
+    not_captured: "Без итогового снимка",
     capture_failed: "Ошибка запроса",
     source_anomaly: "Противоречивые данные источника",
     silver_screen_approved: "mooon · согласованная выгрузка",
@@ -1029,7 +1194,7 @@ function render() {
     availability_estimate: "Оценка занятости по карте мест: считаются места, которые уже недоступны. Это не точное число продаж — среди них могут быть брони или технически закрытые места.",
     closed_before_capture: "Сеанс закрылся до того, как мы получили пригодный снимок карты мест. Продажи по нему не подставляются.",
     general_admission_unverified: "У сеанса нет нумерованных мест, поэтому его нельзя проверить по карте мест так же, как обычный сеанс.",
-    not_captured: "Сеанс найден в расписании, но пригодный итоговый снимок ещё не получен.",
+    not_captured: "Для этих отдельных сеансов нет пригодного итогового снимка на момент отчёта. Это не отменяет публикацию дневного отчёта и не означает, что продаж не было.",
     capture_failed: "При запросе данных произошла техническая ошибка. Это не означает, что продаж не было.",
     source_anomaly: "Источник вернул противоречивые показатели. Результат оставлен отдельно и требует проверки.",
     silver_screen_approved: "Согласованная выгрузка mooon: данные переданы готовым итогом.",
@@ -1242,6 +1407,7 @@ function configureReportingDates() {
 }
 
 async function handlePeriodChange() {
+  resetAttendanceChange("loading", "Загрузка сравнения…");
   const requestedPeriod = $("period").value;
   if (dataMode !== "partitioned") {
     activePeriodValue = requestedPeriod;
@@ -1262,6 +1428,7 @@ async function handlePeriodChange() {
   } catch (error) {
     if (requestId !== periodRequestId) return;
     $("period").value = activePeriodValue;
+    void renderAttendanceChange();
     renderPeriodControl();
     setDataLoadState("error", `${error.message} Ранее загруженные данные сохранены.`);
     $("data-load-state")?.focus?.();
@@ -1308,6 +1475,7 @@ const dashboardReady = init().catch((error) => {
   $("updated").textContent = "Ошибка данных";
   $("subtitle").textContent = error.message;
   setDataLoadState("error", error.message);
+  resetAttendanceChange("unavailable", "Не удалось загрузить данные");
   console.error(error);
 });
 
