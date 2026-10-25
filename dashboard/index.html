@@ -26,7 +26,7 @@
       })();
     </script>
     <link rel="preload" href="../assets/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="../styles.css?v=report-time-logout-v1">
+    <link rel="stylesheet" href="../styles.css?v=hnd0005-v02">
   </head>
   <body class="dashboard-page" data-index-url="../data/market-index.json" data-data-url="../data/market.json">
     <header class="app-chrome">
@@ -124,7 +124,7 @@
             </article>
 
             <article class="market-card instrument instrument-secondary share-panel">
-              <header class="share-panel-heading"><h3 id="cash-share-title">Доля кассы mooon · оценка</h3></header>
+              <header class="share-panel-heading"><h3 id="cash-share-title">Доля выручки mooon</h3></header>
               <div class="orbit share-composition" id="revenue-orbit" role="meter" aria-labelledby="cash-share-title" aria-describedby="revenue-share-note" aria-valuemin="0" aria-valuemax="100" data-dial-state="unavailable">
                 <div class="share-disc" aria-hidden="true"><span class="share-disc-hub"></span></div>
                 <div class="share-reading"><strong id="revenue-share" data-qa-atomic="percentage">—</strong></div>
@@ -141,7 +141,7 @@
               <small>Учтены возвраты</small>
             </article>
             <article class="own-metric money">
-              <span>Касса mooon</span>
+              <span>Выручка mooon</span>
               <strong data-mirror="ss-import-revenue" data-qa-atomic="amount">—</strong>
               <small>Учтены возвраты</small>
             </article>
@@ -152,11 +152,15 @@
                 <span>Билеты рынка</span><strong id="tickets" data-qa-atomic="amount">—</strong>
               </div>
               <div class="volume-metric">
-                <span>Касса рынка</span><strong id="revenue" data-qa-atomic="amount">—</strong>
+                <span>Выручка рынка</span><strong id="revenue" data-qa-atomic="amount">—</strong>
               </div>
             </article>
           <div class="sales-ledger-footer"><a href="#quality-section">Данные mooon <span aria-hidden="true">↗</span></a><a href="#quality-section">Источники и полнота <span aria-hidden="true">↗</span></a></div>
-          <details class="sales-breakdown"><summary>Состав рынка и полнота данных</summary><div class="sales-breakdown-content"><p><b>Билеты:</b> <span id="tickets-note"></span></p><p><b>Касса:</b> <span id="revenue-note"></span></p>
+          <details class="sales-breakdown"><summary>Состав рынка и полнота данных</summary><div class="sales-breakdown-content"><p><b>Билеты:</b> <span id="tickets-note"></span></p><p><b>Выручка:</b> <span id="revenue-note"></span></p>
+          <p><b>Оценочные данные:</b> <strong id="estimate-share">—</strong> · <span id="estimate-note"></span>. Это доля измеренных сеансов конкурентов с расчётными продажами.</p>
+          <p>Выручка рынка включает выручку mooon, точную выручку конкурентов и верхнюю оценку по сеансам без точной выручки.</p>
+          <p>Средняя цена рассчитана по билетам и выручке mooon и только сеансам конкурентов с точной выручкой; оценки в этот показатель не включены.</p>
+          <p>Динамика посещаемости сравнивает выбранный день с днём ровно 7 дней назад. Нужны сопоставимые GREEN-отчёты с полнотой не ниже 95% и расхождением полноты не более 2 п.п.; фильтры применяются к обеим датам. Для выбранного среза действуют те же пороги полноты; также проверяется совпадение источников и кинотеатров.</p>
           <aside class="data-disclaimer" aria-label="Полнота данных">
             <span aria-hidden="true">i</span>
             <p><strong id="coverage">—</strong> <span id="coverage-note"></span></p>
@@ -167,9 +171,9 @@
 
       <section class="signal-strip" aria-label="Ключевые показатели качества и эффективности">
         <article><span>Завершённые сеансы</span><strong id="sessions-total">—</strong><small id="sessions-note"></small></article>
-        <article><span>Средняя цена</span><strong id="average-price">—</strong><small id="average-price-note">mooon + конкуренты</small></article>
+        <article><span>Средняя цена</span><strong id="average-price">—</strong><small id="average-price-note">mooon + сеансы конкурентов</small></article>
         <article><span>Загрузка залов</span><strong id="occupancy">—</strong><small id="occupancy-note"></small></article>
-        <article><span>Оценочные данные</span><strong id="estimate-share">—</strong><small id="estimate-note"></small></article>
+        <article class="attendance-signal" data-attendance-state="loading" aria-live="polite" aria-atomic="true"><span>Динамика посещаемости</span><strong id="attendance-change" data-qa-atomic="percentage">—</strong><small id="attendance-note">Загрузка сравнения</small><small id="attendance-breakdown"></small></article>
       </section>
 
       <section class="section-block competitor-section" id="competitors">
@@ -210,7 +214,7 @@
           <article class="source-card source-silver">
             <header><div><strong>mooon</strong><span id="ss-import-period">—</span></div></header>
             <div class="source-primary"><strong id="ss-import-tickets">—</strong><span>проданных билетов</span></div>
-            <dl><div><dt>Касса</dt><dd id="ss-import-revenue">—</dd></div><div><dt>Сеансы</dt><dd id="ss-import-sessions">—</dd></div></dl>
+            <dl><div><dt>Выручка</dt><dd id="ss-import-revenue">—</dd></div><div><dt>Сеансы</dt><dd id="ss-import-sessions">—</dd></div></dl>
           </article>
           <article class="source-card source-bycard">
             <header><div><strong>ByCard · 24Афиша</strong><span id="bycard-import-period">—</span></div></header>
@@ -227,15 +231,14 @@
             <div class="source-primary"><strong id="skyline-import-tickets">—</strong><span>собрано билетов · точно + оценка</span></div>
             <dl class="source-metrics"><div><dt>Сеансы найдены</dt><dd id="skyline-discovered-sessions">—</dd></div><div><dt>Измерено</dt><dd id="skyline-final-sessions">—</dd></div><div><dt>Без финальных данных</dt><dd id="skyline-missing-sessions">—</dd></div></dl>
           </article>
-          <article class="quality-panel"><header class="panel-heading"><div><h3>Качество сбора</h3><p>Точность и полнота наблюдений</p></div></header><div id="quality"></div></article>
+          <details class="quality-panel" id="quality-disclosure"><summary><span><strong>Качество сбора</strong><small>Точность и полнота наблюдений</small></span></summary><div id="quality"></div></details>
         </div>
       </section>
 
-      <footer><strong>Доля рынка, динамика и качество данных — в одном срезе.</strong><span>Cinemalab Market Intelligence · mooon · ByCard · Korona · Skyline</span></footer>
     </main>
     <script src="../posters.js?v=hnd0003-posters-stable-v01"></script>
     <script src="../trend.js?v=hnd0003-share-labels-v01"></script>
-    <script src="../app.js?v=report-time-logout-v1"></script>
+    <script src="../app.js?v=hnd0005-v02"></script>
     <script src="../ui.js?v=hnd0003-v06"></script>
   </body>
 </html>

@@ -248,6 +248,23 @@ html{scroll-padding-top:120px}.nav-pill,.shell{width:calc(100% - 32px)}.brand{fo
 
 /* Official mooon favicon reused as a compact, circular brand mark. */
 .brand-mooon{display:block;width:34px;height:34px;flex:0 0 auto;border-radius:50%;object-fit:contain;background:#101010}
+/* Existing quality rows live behind a slim, native keyboard-accessible disclosure. */
+.quality-panel{padding:0}
+.quality-panel>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:68px;padding:15px 20px;list-style:none;cursor:pointer;border-radius:inherit}
+.quality-panel>summary::-webkit-details-marker{display:none}
+.quality-panel>summary::after{content:"";width:8px;height:8px;flex:0 0 auto;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);margin:0 3px 4px;color:var(--muted)}
+.quality-panel[open]>summary::after{transform:rotate(225deg);margin-bottom:-4px}
+.quality-panel>summary:hover{background:var(--canvas)}
+.quality-panel>summary:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+.quality-panel>summary>span{display:grid;gap:3px;min-width:0}
+.quality-panel>summary strong{font-size:16px;font-weight:600;line-height:1.35}
+.quality-panel>summary small{font-size:12px;color:var(--muted);line-height:1.5}
+.quality-panel>#quality{padding:0 20px 6px}
+.attendance-signal small{line-height:1.5}
+#attendance-breakdown{margin-top:3px}
+#attendance-breakdown span{display:inline-block;font-size:inherit;line-height:inherit;color:inherit}
+.attendance-signal [data-qa-atomic]{white-space:nowrap}
+@media(max-width:600px){.quality-panel>summary{padding:14px 16px;min-height:64px}.quality-panel>#quality{padding:0 16px 4px}.quality-panel>summary strong{font-size:15px}.quality-panel>summary small{font-size:12px}}
 @media(max-width:350px){.brand-mooon{width:30px;height:30px}}
 @media(max-width:1100px){.trend-inspector{grid-template-columns:1fr 1fr;gap:12px}.trend-selected-date{grid-column:1/-1}.trend-inspector .trend-selected-date{display:grid;grid-template-columns:1fr auto;gap:4px 12px}.trend-selected-date>span{grid-column:1/-1}.trend-inspector .trend-selected-date .trend-day-state{align-self:center}.timeline-legend small{display:none}}
 @media(max-width:600px){
