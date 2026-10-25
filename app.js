@@ -775,7 +775,13 @@ function renderMarketQuality() {
   };
   banner.hidden = false;
   banner.setAttribute("data-quality", quality.status);
-  banner.textContent = `${dateLabel}${counts} · ${messages[quality.status]}`;
+  const confirmedPercentage = row && row.total > 0
+    && Number.isFinite(row.coverage_pct) && row.coverage_pct >= 0 && row.coverage_pct <= 100;
+  banner.textContent = quality.status === "GREEN"
+    ? `${dateLabel} · ${confirmedPercentage ? `${nf.format(row.coverage_pct)}%` : "Полнота подтверждена"}`
+    : `${dateLabel}${counts} · ${messages[quality.status]}`;
+  banner.title = messages[quality.status];
+  banner.setAttribute("aria-description", messages[quality.status]);
   return quality;
 }
 
@@ -956,7 +962,7 @@ function render() {
   $("film-count").textContent = `${films.length} фильмов`;
   $("films-table").innerHTML = `
     <div class="table-row header">
-      <span>Фильм</span><span class="number">Билеты<small>рынок · билеты</small></span><span class="number">Билеты<small>mooon · билеты</small></span><span class="number">Билеты<small>конкуренты · билеты</small></span><span class="number">Касса<small>рынок · BYN</small></span><span class="number">Касса<small>mooon · BYN</small></span><span class="number">Доля<small>mooon</small></span><span class="number">Доля фильма<small>в рынке</small></span><span>Прокат</span>
+      <span>Фильм</span><span class="number">Билеты<small>Весь рынок</small></span><span class="number">Билеты<small>Только mooon</small></span><span class="number">Билеты<small>Конкуренты</small></span><span class="number">Касса<small>рынок · BYN</small></span><span class="number">Касса<small>mooon · BYN</small></span><span class="number">Доля<small>mooon</small></span><span class="number">Доля фильма<small>в рынке</small></span><span>Прокат</span>
     </div>` + films.slice(0, 20).map((film) => `
     <div class="table-row">
       <span class="film-name film-identity" data-poster-scope="${film.releaseScope}"><span class="film-poster" aria-hidden="true"></span><span class="film-title">${esc(film.name)}</span></span>

@@ -243,6 +243,10 @@ html{scroll-padding-top:120px}.nav-pill,.shell{width:calc(100% - 32px)}.brand{fo
 .trend-loading strong{font-size:16px;font-weight:600;color:var(--ink-soft)}
 .trend-loading p{font-size:13px;line-height:1.6;margin:0}
 .trend-loading-icon{width:40px;height:32px;border-bottom:3px solid var(--rule);background:linear-gradient(to top,var(--accent-soft) 70%,transparent 70%) 0 bottom/9px 100% no-repeat,linear-gradient(to top,var(--accent) 100%,transparent 100%) 15px bottom/9px 100% no-repeat,linear-gradient(to top,var(--accent-soft) 45%,transparent 45%) 30px bottom/9px 100% no-repeat}
+
+/* Official mooon favicon reused as a compact, circular brand mark. */
+.brand-mooon{display:block;width:34px;height:34px;flex:0 0 auto;border-radius:50%;object-fit:contain;background:#101010}
+@media(max-width:350px){.brand-mooon{width:30px;height:30px}}
 @media(max-width:1100px){.trend-inspector{grid-template-columns:1fr 1fr;gap:12px}.trend-selected-date{grid-column:1/-1}.trend-inspector .trend-selected-date{display:grid;grid-template-columns:1fr auto;gap:4px 12px}.trend-selected-date>span{grid-column:1/-1}.trend-inspector .trend-selected-date .trend-day-state{align-self:center}.timeline-legend small{display:none}}
 @media(max-width:600px){
  .trend-panel:has(.trend-timeline){padding:16px}.trend-panel:has(.trend-timeline) .panel-heading h3{font-size:16px}.trend-panel:has(.trend-timeline) .panel-heading{gap:8px}.trend-panel:has(.trend-timeline) .panel-heading p{font-size:12px;line-height:1.5}.trend-panel:has(.trend-timeline) .panel-heading>span{font-size:11px;padding:3px 5px}
