@@ -725,7 +725,7 @@ function attendanceDayQuality(date) {
   if (dataMode !== "partitioned" || !published || !entry?.url
       || !/^[a-f0-9]{64}$/.test(normalizeSha256(entry.sha256))
       || quality?.status !== "GREEN" || quality.publishable !== true || !proof
-      || quality.verified === false || quality.mooon_verified === false
+      || quality.verified === false || quality.mooon_verified === false || quality.shares_reliable === false
       || !Number.isFinite(quality.coverage_pct) || quality.coverage_pct < 95 || quality.coverage_pct > 100
       || !String(source.silver_screen?.status || "").startsWith("ready")) return null;
   if ((quality.date && quality.date !== date)
@@ -812,7 +812,7 @@ async function renderAttendanceChange() {
   const currentQuality = attendanceDayQuality(day);
   const previousQuality = attendanceDayQuality(previousDay);
   if (!currentQuality || !previousQuality) {
-    resetAttendanceChange("unavailable", "Нет подтверждённого сравнения с днём −7");
+    resetAttendanceChange("unavailable", "Нет подтверждённых данных для сравнения");
     return;
   }
   if (Math.abs(currentQuality.coverage_pct - previousQuality.coverage_pct) > 2) {
@@ -840,7 +840,7 @@ async function renderAttendanceChange() {
       const coverage = snapshot.total ? snapshot.measured / snapshot.total * 100 : null;
       return quality.total === snapshot.total && quality.usable === snapshot.measured
         && coverage !== null && Math.abs(quality.coverage_pct - coverage) <= 0.01
-        && (!providers.length || (providers.sort().join("|") === snapshot.providers
+        && ((!providers.length && quality.verification_basis === "delivered_close_ledger") || (providers.sort().join("|") === snapshot.providers
           && providers.every((provider) => quality.sources[provider].total === snapshot.sourceCounts[provider].total
             && quality.sources[provider].usable === snapshot.sourceCounts[provider].usable)));
     };
@@ -872,7 +872,7 @@ async function renderAttendanceChange() {
     host.setAttribute("aria-busy", "false");
   } catch (error) {
     if (request === renderAttendanceChange.currentRequest) {
-      resetAttendanceChange("unavailable", "Не удалось проверить данные дня −7");
+      resetAttendanceChange("unavailable", "Не удалось проверить день сравнения");
     }
   }
 }
