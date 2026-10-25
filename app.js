@@ -18,6 +18,31 @@ let periodRequestId = 0;
 const loadedDays = new Map();
 const pendingDays = new Map();
 const $ = (id) => document.getElementById(id);
+const ACCESS_KEY = "cinemalab_market_access";
+$("logout")?.addEventListener("click", () => {
+  try {
+    sessionStorage.removeItem(ACCESS_KEY);
+  } finally {
+    window.location.replace(new URL("../", window.location.href));
+  }
+});
+
+function renderReportUpdated(payload) {
+  const update = payload.meta?.report_update;
+  const timestamp = typeof update?.delivered_at === "string" ? Date.parse(update.delivered_at) : NaN;
+  const valid = update?.verification_basis === "served_delivery_verifier"
+    && /^\d{4}-\d{2}-\d{2}$/.test(update.date || "")
+    && payload.reporting_dates?.includes(update.date)
+    && /(?:Z|[+-]\d{2}:\d{2})$/.test(update.delivered_at || "")
+    && Number.isFinite(timestamp);
+  $("updated").textContent = valid
+    ? `Обновлено ${new Date(timestamp).toLocaleString("ru-RU", { timeZone: "Europe/Minsk" })}`
+    : "Время обновления не подтверждено";
+  $("updated").title = valid
+    ? `Последняя подтверждённая публикация отчёта за ${update.date.split("-").reverse().join(".")} · время Минска`
+    : "Нет подтверждения доставки отчёта. Время экспорта или обновления интерфейса не используется.";
+  $("updated").dataset.deliveredAt = valid ? update.delivered_at : "";
+}
 const esc = (value) => String(value ?? "")
   .replaceAll("&", "&amp;")
   .replaceAll("<", "&lt;")
@@ -1248,7 +1273,7 @@ async function init() {
   setDataLoadState("loading", "Загрузка данных…");
   source = await loadInitialSource();
   if (!source.meta?.generated_at) throw new Error("В данных отсутствует время обновления.");
-  $("updated").textContent = `Обновлено ${new Date(source.meta.generated_at).toLocaleString("ru-RU")}`;
+  renderReportUpdated(source);
   const defaultPeriod = configureReportingDates();
   if (dataMode === "partitioned" && defaultPeriod) {
     const requestId = ++periodRequestId;
