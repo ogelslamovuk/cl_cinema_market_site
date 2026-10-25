@@ -14,15 +14,19 @@
       (() => {
         const key = "cinemalab_market_access";
         const base = new URL("../", window.location.href).toString();
-        try {
-          if (sessionStorage.getItem(key) !== "granted") window.location.replace(base);
-        } catch (error) {
-          window.location.replace(base);
+        function checkAccess() {
+          try {
+            if (sessionStorage.getItem(key) !== "granted") window.location.replace(base);
+          } catch (error) {
+            window.location.replace(base);
+          }
         }
+        checkAccess();
+        window.addEventListener("pageshow", checkAccess);
       })();
     </script>
     <link rel="preload" href="../assets/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="../styles.css?v=hnd0004-v01">
+    <link rel="stylesheet" href="../styles.css?v=report-time-logout-v1">
   </head>
   <body class="dashboard-page" data-index-url="../data/market-index.json" data-data-url="../data/market.json">
     <header class="app-chrome">
@@ -38,8 +42,13 @@
           <a href="#films">Фильмы</a>
           <a href="#quality-section">Данные</a>
         </div>
+        <div class="nav-actions">
         <div class="status" role="status" aria-live="polite">
           <span aria-hidden="true"></span><strong id="updated">Загрузка данных…</strong>
+        </div>
+        <button class="logout-button" id="logout" type="button" aria-label="Выйти из отчёта" title="Выйти из отчёта">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4M13 8l4 4-4 4M8 12h12"/></svg>
+        </button>
         </div>
       </nav>
 
@@ -226,7 +235,7 @@
     </main>
     <script src="../posters.js?v=hnd0003-posters-stable-v01"></script>
     <script src="../trend.js?v=hnd0003-share-labels-v01"></script>
-    <script src="../app.js?v=hnd0004-v01"></script>
+    <script src="../app.js?v=report-time-logout-v1"></script>
     <script src="../ui.js?v=hnd0003-v06"></script>
   </body>
 </html>
