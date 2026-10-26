@@ -1,2 +1,11 @@
 __pycache__/
 .venv/
+.artifacts/
+.idea/
+.test-temp/
+.tmp/
+node_modules/
+*.tar
+*.tar.gz
+.env
+config.env
