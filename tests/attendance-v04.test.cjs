@@ -1,0 +1,27 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const path = require('node:path');
+
+const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+const section = app.slice(app.indexOf('function attendanceDaySnapshot('), app.indexOf('function resetAttendanceChange('));
+assert.ok(section.includes('function attendancePercent('));
+const context = { source: { meta: { generated_at: '2026-11-01T00:00:00Z' } }, ticketValue: row => row.tickets_exact ?? row.tickets_estimate ?? null };
+vm.createContext(context);
+vm.runInContext(section, context);
+const row = (value, cinema = 'A') => ({ stop_sale_at: '2026-10-26T10:00:00Z', tickets_exact: value, cinema });
+const own = (value, cinema = 'A') => ({ starts_at: '2026-10-26T10:00:00Z', tickets: value, cinema });
+const snap = (marketRows, silverRows, filters = {}) => context.attendanceDaySnapshot({ marketRows, silverRows }, filters);
+const a = snap([row(0), row(null), row('5'), row(9, 'B')], [own(0), own(null)] , { cinema: 'A' });
+assert.equal(a.market, 0); assert.equal(a.silver, 0); assert.equal(a.competitors, 0);
+const b = snap([row(20)], [own(10)]);
+assert.equal(context.attendancePercent(context.attendanceDelta(a.market, b.market)), '−100,0%');
+const missing = snap([row(null), row('5')], [own(null)]);
+assert.equal(missing.market, null); assert.equal(missing.silver, null); assert.equal(missing.competitors, null);
+const single = snap([], [own(8)]);
+assert.equal(single.market, 8); assert.equal(single.competitors, null);
+assert.equal(context.attendanceDelta(single.competitors, b.competitors), null);
+assert.equal(context.attendanceDelta(0, 0), null);
+assert.equal(context.attendancePercent(context.attendanceDelta(3727, 4100)), '−9,1%');
+assert.equal(context.attendancePercent(context.attendanceDelta(15960, 14635)), '+9,1%');
+console.log('attendance-v04 unit: PASS');
