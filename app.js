@@ -714,66 +714,20 @@ async function renderDailyTrend() {
   globalThis.MarketTrend.render({ days, start, end, loading: false, filterLabel, onRetry: () => { void renderDailyTrend(); } });
 }
 
-// The compact KPI compares one delivered day with that calendar day minus seven.
-// Its stricter comparison gate does not alter market totals or existing share rules.
-function attendanceDayQuality(date) {
-  const quality = source.market_quality_by_date?.[date];
-  const entry = partitionIndex?.days?.[date];
-  const published = reportingDateSet.has(date) && !isUnavailableDate(date)
-    && date <= publishedPeriodCutoff();
-  const proof = quality?.verified === true || quality?.verification_basis === "delivered_close_ledger";
-  if (dataMode !== "partitioned" || !published || !entry?.url
-      || !/^[a-f0-9]{64}$/.test(normalizeSha256(entry.sha256))
-      || quality?.status !== "GREEN" || quality.publishable !== true || !proof
-      || quality.verified === false || quality.mooon_verified === false || quality.shares_reliable === false
-      || !Number.isFinite(quality.coverage_pct) || quality.coverage_pct < 95 || quality.coverage_pct > 100
-      || !String(source.silver_screen?.status || "").startsWith("ready")) return null;
-  if ((quality.date && quality.date !== date)
-      || (quality.policy && quality.policy !== source.meta.market_quality_policy)) return null;
-  for (const assessment of Object.values(quality.sources || {})) {
-    if (!assessment || typeof assessment !== "object" || assessment.date !== date || assessment.schedule_evidence?.complete !== true
-        || !Number.isInteger(assessment.total) || !Number.isInteger(assessment.usable)
-        || assessment.usable < 0 || assessment.usable > assessment.total
-        || (assessment.total === 0 && assessment.zero_sessions_verified !== true)) return null;
-  }
-  return quality;
-}
-
+// Compare available observations from two SHA-verified calendar days.
 function attendanceDaySnapshot(rows, filters) {
   const generatedAt = new Date(source.meta.generated_at).getTime();
   const marketRows = rows.marketRows.filter((row) => new Date(row.stop_sale_at).getTime() <= generatedAt);
   const ownRows = rows.silverRows.filter((row) => new Date(row.starts_at).getTime() <= generatedAt);
-  const footprint = [
-    ...marketRows.map((row) => `${providerForSession(row)}:${row.cinema_id ?? row.cinema}`),
-    ...ownRows.map((row) => `mooon:${row.cinema_id ?? row.cinema}`),
-  ];
   const matches = (row) => Object.entries(filters).every(([key, value]) => !value || String(row[key]) === value);
-  const competitors = marketRows.filter(matches);
-  const own = ownRows.filter(matches);
-  const measured = competitors.filter((row) => ticketValue(row) !== null);
-  const providers = [...new Set(competitors.map(providerForSession))].sort();
-  const usable = competitors.length + own.length > 0
-    && providers.every((provider) => measured.some((row) => providerForSession(row) === provider))
-    && measured.every((row) => Number.isFinite(ticketValue(row)))
-    && own.every((row) => Number.isFinite(row.tickets));
-  const silver = own.reduce((sum, row) => sum + row.tickets, 0);
-  const other = measured.reduce((sum, row) => sum + ticketValue(row), 0);
+  const own = ownRows.filter(matches).map((row) => row.tickets).filter(Number.isFinite);
+  const competitors = marketRows.filter(matches).map(ticketValue).filter(Number.isFinite);
+  const sum = (values) => values.length ? values.reduce((total, value) => total + value, 0) : null;
+  const silver = sum(own);
+  const other = sum(competitors);
   return {
-    usable, market: silver + other, silver, competitors: other,
-    total: marketRows.length,
-    measured: marketRows.filter((row) => ticketValue(row) !== null).length,
-    sourceCounts: Object.fromEntries([...new Set(marketRows.map(providerForSession))].map((provider) => {
-      const observations = marketRows.filter((row) => providerForSession(row) === provider);
-      return [provider, { total: observations.length, usable: observations.filter((row) => ticketValue(row) !== null).length }];
-    })),
-    footprint: [...new Set(footprint)].sort().join("|"),
-    filteredFootprint: [...new Set([
-      ...competitors.map((row) => `${providerForSession(row)}:${row.cinema_id ?? row.cinema}`),
-      ...own.map((row) => `mooon:${row.cinema_id ?? row.cinema}`),
-    ])].sort().join("|"),
-    coverage: competitors.length ? measured.length / competitors.length * 100 : null,
-    providers: [...new Set(marketRows.map(providerForSession))].sort().join("|"),
-    scope: [...providers, ...(own.length ? ["mooon"] : [])].sort().join("|"),
+    market: own.length || competitors.length ? (silver ?? 0) + (other ?? 0) : null,
+    silver, competitors: other,
   };
 }
 
@@ -809,14 +763,8 @@ async function renderAttendanceChange() {
   }
   const day = period.slice(2);
   const previousDay = addDays(day, -7);
-  const currentQuality = attendanceDayQuality(day);
-  const previousQuality = attendanceDayQuality(previousDay);
-  if (!currentQuality || !previousQuality) {
-    resetAttendanceChange("unavailable", "Нет подтверждённых данных для сравнения");
-    return;
-  }
-  if (Math.abs(currentQuality.coverage_pct - previousQuality.coverage_pct) > 2) {
-    resetAttendanceChange("unavailable", "Разница полноты данных больше 2 п.п.");
+  if (dataMode !== "partitioned" || !partitionIndex?.days?.[day] || !partitionIndex?.days?.[previousDay]) {
+    resetAttendanceChange("unavailable", "Нет файла дня для сравнения");
     return;
   }
   const host = resetAttendanceChange("loading", "Загрузка сравнения…");
@@ -824,7 +772,7 @@ async function renderAttendanceChange() {
   const request = renderAttendanceChange.currentRequest;
   const filters = Object.fromEntries(["region", "city", "cinema", "film"].map((key) => [key, $(key).value]));
   try {
-    const currentRows = loadedDays.get(day);
+    const currentRows = await fetchVerifiedDay(day);
     if (!currentRows || currentRows.verifiedSha256 !== normalizeSha256(partitionIndex.days[day].sha256)) {
       throw new Error("Нет проверенных данных выбранного дня");
     }
@@ -835,38 +783,10 @@ async function renderAttendanceChange() {
     if (request !== renderAttendanceChange.currentRequest) return;
     const current = attendanceDaySnapshot(currentRows, filters);
     const previous = attendanceDaySnapshot(previousRows, filters);
-    const sourceMetadataMatches = (quality, snapshot) => {
-      const providers = Object.keys(quality.sources || {});
-      const coverage = snapshot.total ? snapshot.measured / snapshot.total * 100 : null;
-      return quality.total === snapshot.total && quality.usable === snapshot.measured
-        && coverage !== null && Math.abs(quality.coverage_pct - coverage) <= 0.01
-        && ((!providers.length && quality.verification_basis === "delivered_close_ledger") || (providers.sort().join("|") === snapshot.providers
-          && providers.every((provider) => quality.sources[provider].total === snapshot.sourceCounts[provider].total
-            && quality.sources[provider].usable === snapshot.sourceCounts[provider].usable)));
-    };
-    if (!current.usable || !previous.usable || current.footprint !== previous.footprint || current.scope !== previous.scope) {
-      resetAttendanceChange("unavailable", "Нет сопоставимых данных для выбранных фильтров");
-      return;
-    }
-    if (!sourceMetadataMatches(currentQuality, current) || !sourceMetadataMatches(previousQuality, previous)) {
-      resetAttendanceChange("unavailable", "Изменился подтверждённый состав источников");
-      return;
-    }
-    if (Object.values(filters).some(Boolean)
-        && (current.filteredFootprint !== previous.filteredFootprint
-          || (current.coverage !== null && previous.coverage !== null
-            && (current.coverage < 95 || previous.coverage < 95 || Math.abs(current.coverage - previous.coverage) > 2)))) {
-      resetAttendanceChange("unavailable", "Нет сопоставимого покрытия выбранных фильтров");
-      return;
-    }
     const market = attendanceDelta(current.market, previous.market);
-    if (market === null) {
-      resetAttendanceChange("unavailable", "Нет положительной базы для сравнения");
-      return;
-    }
     const weekdays = ["к прошлому воскресенью", "к прошлому понедельнику", "к прошлому вторнику", "к прошлой среде", "к прошлому четвергу", "к прошлой пятнице", "к прошлой субботе"];
     $("attendance-change").textContent = attendancePercent(market);
-    $("attendance-note").textContent = weekdays[new Date(`${day}T12:00:00Z`).getUTCDay()];
+    $("attendance-note").textContent = market === null ? "Нет данных или положительной базы" : weekdays[new Date(`${day}T12:00:00Z`).getUTCDay()];
     $("attendance-breakdown").innerHTML = `<span data-qa-atomic="amount">mooon ${attendancePercent(attendanceDelta(current.silver, previous.silver))}</span> · <span data-qa-atomic="amount">конкуренты ${attendancePercent(attendanceDelta(current.competitors, previous.competitors))}</span>`;
     host.dataset.attendanceState = "ready";
     host.setAttribute("aria-busy", "false");
