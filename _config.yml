@@ -1,2 +1,2 @@
 include:
-  - .well-known/acme-challenge
+  - .well-known
