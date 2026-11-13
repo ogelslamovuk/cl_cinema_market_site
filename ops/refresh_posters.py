@@ -68,7 +68,16 @@ def build_catalog(rows,old,titles,repo,canonicalize=str.strip):
         if not item['aliases']:item['src']=None
     return {'version':2,'source':'mooon-readonly-db','blocked_aliases':sorted(blocked),'items':sorted(items,key=lambda item:item['film_id'])}
 
-def cache_images(data,old,repo):
+def write_direct_file(path,content):
+    temp=path.with_name(f'.{path.name}.tmp')
+    try:
+        temp.write_bytes(content)
+        temp.chmod(0o640)
+        os.replace(temp,path)
+    finally:
+        temp.unlink(missing_ok=True)
+
+def cache_images(data,old,repo,*,direct=False):
     from PIL import Image,ImageOps
     prior={item['film_id']:item for item in old['items']}
     generated=[]
@@ -85,7 +94,10 @@ def cache_images(data,old,repo):
             buffer=io.BytesIO();image.save(buffer,format='WEBP',quality=83,method=6)
             content=buffer.getvalue();digest=hashlib.sha256(content).hexdigest()
             name=f'f{item["film_id"]}-m{item["media_id"]}-{digest[:16]}.webp'
-            (repo/'assets/posters'/name).write_bytes(content);item['src']=name;generated.append('assets/posters/'+name)
+            path=repo/'assets/posters'/name
+            if direct:write_direct_file(path,content)
+            else:path.write_bytes(content)
+            item['src']=name;generated.append('assets/posters/'+name)
         except Exception:
             previous=prior.get(item['film_id'],{});asset=previous.get('asset') or previous.get('src')
             item['src']=asset if asset and '/' not in asset and (repo/'assets/posters'/asset).is_file() else None
@@ -117,18 +129,21 @@ def prepare_worktree(repo,work):
 
 def refresh(args):
     repo=args.site_repo.resolve();work=args.worktree.resolve()
-    if args.publish:prepare_worktree(repo,work);repo=work
+    if args.publish and not args.direct:prepare_worktree(repo,work);repo=work
     sys.path.insert(0,str(args.code_root))
     from src.film_catalog import canonical_film_title
     old=previous(repo)
     data=build_catalog(read_database(args.db_config),old,public_titles(repo),repo,canonical_film_title)
-    generated=cache_images(data,old,repo)
+    generated=cache_images(data,old,repo,direct=args.direct)
     content=(json.dumps(data,ensure_ascii=False,separators=(',',':'))+'\n').encode('utf-8')
     if not args.publish:
         args.output.write_bytes(content)
         return {'status':'prepared','films':len(data['items'])}
     target=repo/CATALOG
     if target.exists() and target.read_bytes()==content:return {'status':'unchanged','films':len(data['items'])}
+    if args.direct:
+        write_direct_file(target,content)
+        return {'status':'published','films':len(data['items'])}
     temp=repo/(CATALOG+'.tmp');temp.write_bytes(content);os.replace(temp,target)
     git(repo,'add','--',CATALOG,*generated);git(repo,'commit','-m','Refresh mooon poster catalog')
     for attempt in range(3):
@@ -148,7 +163,9 @@ def main():
     parser.add_argument('--code-root',type=pathlib.Path,default=pathlib.Path('/opt/cinema-market-current'))
     parser.add_argument('--output',type=pathlib.Path)
     parser.add_argument('--publish',action='store_true')
+    parser.add_argument('--direct',action='store_true',help='publish in the local web root without Git')
     args=parser.parse_args()
+    if args.direct and not args.publish:parser.error('--direct requires --publish')
     if not args.publish and not args.output:parser.error('--output required without --publish')
     try:
         lock_path=args.worktree.parent/'poster-refresh.lock';lock_path.parent.mkdir(parents=True,exist_ok=True)
